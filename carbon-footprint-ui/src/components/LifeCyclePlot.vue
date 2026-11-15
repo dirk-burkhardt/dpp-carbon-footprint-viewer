@@ -499,7 +499,7 @@ const makePlot = () => {
           y2: "yMax",
           marker: 'tick',
           dx: -DISPERSION,
-          stroke: (d) => d.count > 1 ? "#000" : "#999",
+          stroke: (d) => d.count > 1 ? "currentColor" : "#999",
         }
       ) : [],
       props.showMinMax ? Plot.ruleX(
@@ -510,7 +510,7 @@ const makePlot = () => {
           y2: "yMax",
           marker: 'tick',
           dx: DISPERSION,
-          stroke: "#000",
+          stroke: "currentColor",
         }
       ) : [],
       // Confidence intervals 2

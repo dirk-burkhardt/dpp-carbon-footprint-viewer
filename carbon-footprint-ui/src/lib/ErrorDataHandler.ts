@@ -20,6 +20,11 @@ export type ErrorDataHandler = {
   message: string
 
   /**
+   * Severity, errors by default
+   */
+  level?: 'error' | 'warning'
+
+  /**
    * More details on the error
    */
   details?: string
@@ -110,6 +115,15 @@ export class ErrorClient {
   }
 
   /**
+   * Add a warning (a problem that does not prevent the display, e.g. incomplete data)
+   * @param message short description
+   * @param details further information
+   */
+  static warn (message: string, details?: string) {
+    ErrorClient.add({ message, details, level: 'warning' })
+  }
+
+  /**
    * Add an error from an API call to handle
    * @param apiResponse api response containing an error
    */
@@ -125,10 +139,28 @@ export class ErrorClient {
   }
 
   static unhandledRejection(event: PromiseRejectionEvent) {
+    const reason = event.reason
+    let message = 'Unexpected error'
+    let trace: string | undefined
+    if (reason instanceof Error) {
+      message = reason.message || message
+      trace = reason.stack
+    } else if (typeof reason === 'string') {
+      message = reason
+    } else if (reason && typeof reason === 'object') {
+      const r = reason as { message?: unknown, status?: unknown }
+      message = typeof r.message === 'string' ? r.message : message
+      try {
+        trace = JSON.stringify(reason)
+      } catch {
+        trace = undefined
+      }
+    }
     ErrorClient.add({
       timestamp: new Date(performance.timeOrigin + event.timeStamp),
-      message: `${event.type} - Unhandled Promise rejection`,
-      trace: JSON.stringify(event.reason),
+      message,
+      status: typeof reason?.status === 'number' ? reason.status : undefined,
+      trace,
     })
   }
 }

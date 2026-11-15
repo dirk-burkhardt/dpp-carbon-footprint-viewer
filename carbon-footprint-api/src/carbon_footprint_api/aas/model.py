@@ -1,4 +1,4 @@
-"""Umwandlung von AAS-3.0-Daten (XML oder spezifikationskonformes JSON) in das JSON-Format der API.
+"""Umwandlung von AAS-Daten (Metamodell 3.0 bis 3.2, XML oder spezifikationskonformes JSON) ins API-Format.
 
 Die API verwendet ein eigenes, vom spezifikationskonformen AAS-JSON abweichendes Format, das das Frontend
 erwartet:
@@ -261,6 +261,18 @@ def _value_list(src: Optional[_Source]) -> Optional[AasObject]:
 def _data_specification_content(src: Optional[_Source]) -> Optional[AasObject]:
     if src is None:
         return None
+    if src.model_type == "DataSpecificationUom":  # neu in Metamodell 3.2
+        return AasObject(
+            "DataSpecificationUom",
+            classificationSystem=src.text("classificationSystem"),
+            classificationSystemVersion=src.text("classificationSystemVersion"),
+            definition=_list(src, "definition", _lang_string),
+            preferredName=_list(src, "preferredName", _lang_string),
+            preferredNameQuantity=_list(src, "preferredNameQuantity", _lang_string),
+            quantityId=src.text("quantityId"),
+            specificUnitId=src.text("specificUnitId"),
+            symbol=src.text("symbol"),
+        )
     return AasObject(
         "DataSpecificationIec61360",
         dataType=enum_value(src.text("dataType")),
@@ -333,7 +345,7 @@ def _specific_asset_id(src: _Source) -> AasObject:
 def _administration(src: Optional[_Source]) -> Optional[AasObject]:
     if src is None:
         return None
-    return AasObject(
+    result = AasObject(
         "AdministrativeInformation",
         creator=_reference(src.obj("creator")),
         revision=src.text("revision"),
@@ -341,6 +353,12 @@ def _administration(src: Optional[_Source]) -> Optional[AasObject]:
         version=src.text("version"),
         embeddedDataSpecifications=_eds(src),
     )
+    # Neu in Metamodell 3.2; nur ausgegeben, wenn vorhanden (Antwortformat für ältere Dateien unverändert)
+    for name in ("createdAt", "updatedAt"):
+        value = src.text(name)
+        if value is not None:
+            result[name] = value
+    return result
 
 
 def _resource(src: Optional[_Source]) -> Optional[AasObject]:
@@ -618,20 +636,42 @@ def _submodel(src: _Source) -> AasObject:
     )
 
 
+def _concept_description(src: _Source) -> AasObject:
+    return AasObject(
+        "ConceptDescription",
+        embeddedDataSpecifications=_eds(src),
+        extensions=_extensions(src),
+        administration=_administration(src.obj("administration")),
+        id=src.text("id"),
+        isCaseOf=_references(src, "isCaseOf"),
+        category=src.text("category"),
+        description=_list(src, "description", _lang_string),
+        displayName=_list(src, "displayName", _lang_string),
+        idShort=src.text("idShort"),
+    )
+
+
 class Environment:
-    """Shells und Submodels eines AAS-Environments (ConceptDescriptions werden nicht benötigt)."""
+    """Shells, Submodels und ConceptDescriptions eines AAS-Environments."""
 
-    __slots__ = ("shells", "submodels")
+    __slots__ = ("concept_descriptions", "shells", "submodels")
 
-    def __init__(self, shells: list[AasObject], submodels: list[AasObject]) -> None:
+    def __init__(
+        self,
+        shells: list[AasObject],
+        submodels: list[AasObject],
+        concept_descriptions: Optional[list[AasObject]] = None,
+    ) -> None:
         self.shells = shells
         self.submodels = submodels
+        self.concept_descriptions = concept_descriptions or []
 
 
 def _environment(src: _Source) -> Environment:
     return Environment(
         shells=[_shell(s) for s in src.items("assetAdministrationShells")],
         submodels=[_submodel(s) for s in src.items("submodels")],
+        concept_descriptions=[_concept_description(c) for c in src.items("conceptDescriptions")],
     )
 
 
@@ -645,7 +685,7 @@ def _xml_parser() -> etree.XMLParser:
 
 
 def parse_xml(data: bytes) -> Environment:
-    """Liest ein AAS-3.0-Environment im XML-Format."""
+    """Liest ein AAS-Environment (Metamodell 3.x) im XML-Format; der Namespace (3/0, 3/1, 3/2) wird ignoriert."""
     try:
         root = etree.fromstring(data, parser=_xml_parser())
     except etree.XMLSyntaxError as e:
@@ -656,7 +696,7 @@ def parse_xml(data: bytes) -> Environment:
 
 
 def parse_json(data: Any) -> Environment:
-    """Liest ein AAS-3.0-Environment im (spezifikationskonformen) JSON-Format, bereits mit json.loads geladen."""
+    """Liest ein AAS-Environment (Metamodell 3.x) im JSON-Format, bereits mit json.loads geladen."""
     if not isinstance(data, dict) or not (
         "assetAdministrationShells" in data or "submodels" in data or "conceptDescriptions" in data
     ):

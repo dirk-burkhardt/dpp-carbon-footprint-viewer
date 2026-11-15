@@ -317,3 +317,19 @@ def test_external_cache_eviction_removes_hidden_shells():
         c.get(f"{API}/external-shells/{b64(f'https://example.com/{i}.aasx')}")
     assert not repo.has_shell("urn:extern:0")
     assert repo.has_shell("urn:extern:1") and repo.has_shell("urn:extern:2")
+
+
+def test_search(aasx_file):
+    with build(aasx_file) as c:
+        hits = c.get(f"{API}/search", params={"q": "inner"}).json()["result"]
+        assert len(hits) == 1
+        assert hits[0]["id"] == "urn:shell"
+        assert hits[0]["globalAssetId"] == "urn:asset:urn:shell"
+        assert {"submodel": "SM", "path": "C.Inner", "text": "Inner"} in hits[0]["matches"]
+        # Werte werden gefunden, Blob-Inhalte, Typangaben und Qualifier nicht
+        assert c.get(f"{API}/search", params={"q": "X"}).json()["result"][0]["matches"][0]["path"] == "C.Inner"
+        for q in ("aGFsbG8", "xs:int", "ModelReference"):
+            assert c.get(f"{API}/search", params={"q": q}).json()["result"] == []
+        assert c.get(f"{API}/search", params={"q": "nicht vorhanden"}).json()["result"] == []
+        assert c.get(f"{API}/search", params={"q": ""}).status_code == 400
+        assert c.get(f"{API}/search", params={"q": "S", "max_matches": 1}).json()["result"][0]["total"] > 1

@@ -4,7 +4,7 @@ from fastapi import APIRouter
 
 from ... import API_PREFIX
 from ..responses import AasJSONResponse
-from . import assets, external, health, shells
+from . import assets, external, health, products, search, shells
 
 
 def build_api_router() -> APIRouter:
@@ -12,6 +12,8 @@ def build_api_router() -> APIRouter:
     router.include_router(external.router)
     router.include_router(shells.router)
     router.include_router(assets.router)
+    router.include_router(products.router)
+    router.include_router(search.router)
     return router
 
 

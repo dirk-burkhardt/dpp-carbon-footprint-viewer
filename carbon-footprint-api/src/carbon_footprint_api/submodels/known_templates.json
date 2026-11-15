@@ -1,0 +1,264 @@
+{
+  "_comment": "Beobachtete IDTA-Submodel-Templates (github.com/admin-shell-io/submodel-templates) und Formatspezifikationen (formats). knownVersions/knownReleases: geprüft und unterstützt. Pflege mit tools/check_idta_templates.py.",
+  "repository": "admin-shell-io/submodel-templates",
+  "families": [
+    {
+      "key": "carbon-footprint",
+      "name": "Carbon Footprint",
+      "idta": "IDTA 02023",
+      "folders": [
+        "Carbon Footprint"
+      ],
+      "parsing": "full",
+      "semanticIds": {
+        "https://admin-shell.io/idta/CarbonFootprint/CarbonFootprint/0/9": "0.9",
+        "https://admin-shell.io/idta/CarbonFootprint/CarbonFootprint/1/0": "1.0"
+      },
+      "knownVersions": [
+        "0/9",
+        "1/0",
+        "1/0/1",
+        "1/0/2",
+        "1/0/3"
+      ]
+    },
+    {
+      "key": "battery-carbon-footprint",
+      "name": "Digital Battery Passport – Product Carbon Footprint",
+      "idta": "IDTA 02035-3",
+      "folders": [
+        "Digital Battery Passport/3_Product Carbon Footprint"
+      ],
+      "parsing": "full",
+      "semanticIds": {},
+      "note": "Profil von Carbon Footprint 1.0 (gleiche SemanticId), erkannt an PerformanceClass",
+      "knownVersions": [
+        "1/0",
+        "1/0/1",
+        "1/0/2"
+      ]
+    },
+    {
+      "key": "nameplate",
+      "name": "Digital Nameplate",
+      "idta": "IDTA 02006",
+      "folders": [
+        "Digital nameplate",
+        "ZVEI_Digital_Nameplate"
+      ],
+      "parsing": "full",
+      "semanticIds": {
+        "https://admin-shell.io/zvei/nameplate/1/0/Nameplate": "1.0",
+        "https://admin-shell.io/zvei/nameplate/2/0/Nameplate": "2.0",
+        "https://admin-shell.io/idta/nameplate/3/0/Nameplate": "3.0"
+      },
+      "knownVersions": [
+        "1/0",
+        "2/0",
+        "3/0",
+        "3/0/1",
+        "3/0/2",
+        "3/0/3"
+      ]
+    },
+    {
+      "key": "battery-nameplate",
+      "name": "Digital Battery Passport – Digital Nameplate",
+      "idta": "IDTA 02035-1",
+      "folders": [
+        "Digital Battery Passport/1_Digital Nameplate"
+      ],
+      "parsing": "full",
+      "semanticIds": {
+        "https://admin-shell.io/idta/digitalbatterypassport/nameplate/1/0/Nameplate": "1.0"
+      },
+      "knownVersions": [
+        "1/0",
+        "1/0/1"
+      ]
+    },
+    {
+      "key": "contact-information",
+      "name": "Contact Information",
+      "idta": "IDTA 02002",
+      "folders": [
+        "Contact Information"
+      ],
+      "parsing": "full",
+      "semanticIds": {
+        "https://admin-shell.io/zvei/nameplate/1/0/ContactInformations": "1.0"
+      },
+      "knownVersions": [
+        "1/0",
+        "1/0/1",
+        "1/0/2",
+        "1/0/3",
+        "1/0/4"
+      ]
+    },
+    {
+      "key": "hierarchical-structures",
+      "name": "Hierarchical Structures enabling Bills of Material",
+      "idta": "IDTA 02011",
+      "folders": [
+        "Hierarchical Structures enabling Bills of Material"
+      ],
+      "parsing": "full",
+      "semanticIds": {
+        "https://admin-shell.io/idta/HierarchicalStructures/1/0/Submodel": "1.0",
+        "https://admin-shell.io/idta/HierarchicalStructures/1/1/Submodel": "1.1"
+      },
+      "knownVersions": [
+        "1/0",
+        "1/1",
+        "1/1/1",
+        "1/1/2",
+        "1/1/3",
+        "1/1/4"
+      ],
+      "withoutJsonTemplate": [
+        "1/0"
+      ]
+    },
+    {
+      "key": "handover-documentation",
+      "name": "Handover Documentation",
+      "idta": "IDTA 02004",
+      "folders": [
+        "Handover Documentation"
+      ],
+      "parsing": "full",
+      "semanticIds": {
+        "http://admin-shell.io/vdi/2770/1/0/Documentation": "VDI 2770 1.0",
+        "0173-1#01-AHF578#001": "1.2",
+        "0173-1#01-AHF578#003": "2.0"
+      },
+      "knownVersions": [
+        "1/2",
+        "2/0",
+        "2/0/1",
+        "2/0/2",
+        "2/0/3",
+        "2/0/4"
+      ]
+    },
+    {
+      "key": "technical-data",
+      "name": "Technical Data",
+      "idta": "IDTA 02003",
+      "folders": [
+        "Technical_Data"
+      ],
+      "parsing": "full",
+      "semanticIds": {
+        "http://admin-shell.io/tmp/SG2/TechnicalData/Submodel/1/0": "1.0",
+        "http://admin-shell.io/sandbox/SG2/TechnicalData/Submodel/1/1": "1.1",
+        "https://admin-shell.io/ZVEI/TechnicalData/Submodel/1/2": "1.2",
+        "0173-1#01-AHX837#002": "2.0"
+      },
+      "knownVersions": [
+        "1/1",
+        "1/2",
+        "1/2/1",
+        "2/0",
+        "2/0/1",
+        "2/0/2",
+        "2/0/3",
+        "2/0/4"
+      ]
+    },
+    {
+      "key": "maintenance-instructions",
+      "name": "Maintenance Instructions",
+      "idta": "IDTA 02018",
+      "folders": [
+        "Maintenance Instructions"
+      ],
+      "parsing": "full",
+      "semanticIds": {
+        "https://admin-shell.io/idta/SubmodelTemplate/MaintenanceInstructions/1/0": "1.0"
+      },
+      "knownVersions": [
+        "1/0",
+        "1/0/1",
+        "1/0/2"
+      ]
+    }
+  ],
+  "nonIdtaSemanticIds": {
+    "https://www.hsu-hh.de/aut/aas/nameplate": "nameplate"
+  },
+  "idShortFallback": {
+    "_comment": "Erkennung von Submodels ohne SemanticId über den Anfang des idShorts: [Familie, angenommene Version]",
+    "CarbonFootprint": [
+      "carbon-footprint",
+      "0.9"
+    ],
+    "DigitalNameplate": [
+      "nameplate",
+      null
+    ],
+    "Nameplate": [
+      "nameplate",
+      null
+    ],
+    "HierarchicalStructures": [
+      "hierarchical-structures",
+      "1.0"
+    ],
+    "BillOfMaterial": [
+      "hierarchical-structures",
+      "1.0"
+    ],
+    "TechnicalData": [
+      "technical-data",
+      null
+    ],
+    "HandoverDocumentation": [
+      "handover-documentation",
+      null
+    ],
+    "Documentation": [
+      "handover-documentation",
+      null
+    ],
+    "MaintenanceInstructions": [
+      "maintenance-instructions",
+      null
+    ]
+  },
+  "formats": [
+    {
+      "key": "metamodel",
+      "name": "AAS Metamodel (XML-/JSON-Schema)",
+      "idta": "IDTA-01001",
+      "repository": "admin-shell-io/aas-specs-metamodel",
+      "knownReleases": [
+        "v3.0.RC01",
+        "v3.0.1.RC01",
+        "v3.0.2.RC01",
+        "V3.0.3RC01",
+        "V3.0.4RC01",
+        "V3.0.5RC02",
+        "v3.0.6",
+        "V3.0.7",
+        "IDTA-01001-3-0-1_schemasV3.0.8",
+        "IDTA-01001-3-0-1_schemasV3.0.9",
+        "v3.1.0",
+        "v3.1.1",
+        "v3.1.2",
+        "v3.2.0"
+      ]
+    },
+    {
+      "key": "aasx",
+      "name": "AASX Package File Format",
+      "idta": "IDTA-01005",
+      "repository": "admin-shell-io/aas-specs-aasx",
+      "knownReleases": [
+        "v3.1.0",
+        "v3.2.0"
+      ]
+    }
+  ]
+}

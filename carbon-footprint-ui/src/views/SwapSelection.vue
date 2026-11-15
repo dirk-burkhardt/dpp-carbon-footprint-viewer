@@ -21,7 +21,8 @@ import { CubeIcon, CubeTransparentIcon, ArrowsPointingOutIcon } from '@heroicons
 import { generateColor, loadFullAssetInfo, simulationFromRoute } from '@/lib/util'
 import { computedAsync } from '@vueuse/core'
 import AssetThumbnail from '@/components/AssetThumbnail.vue'
-import { BackOnErrorHandler } from '@/lib/BackOnErrorHandler'
+import { BackOnErrorHandler, currentLoadError } from '@/lib/BackOnErrorHandler'
+import LoadFailed from '@/components/layout/LoadFailed.vue'
 import { assetIdMapKey, draggedShellKey, shellDescriptionsKey } from '@/lib/injectionKeys'
 import { AssetIdMap } from '@/lib/AssetIdMap'
 import BreadcrumbsBar from '@/components/BreadcrumbsBar.vue'
@@ -43,9 +44,12 @@ const info = computedAsync(async () => {
   }
   const data = await BackOnErrorHandler.bind(loadFullAssetInfo(route.params.asset as string, idMap.value, "url-", () => {}, simulationFromRoute(route)), (e) => {
     if (e.status === 422) {
-      return ["The URL to the asset is invalid or does not point to a valid asset", "Check the link"]
+      return "The URL to the asset is invalid or does not point to a valid asset";
     }
-    return ["An error occurred while loading the asset", "Try another asset"];
+    if (e.status === 404) {
+      return "The asset could not be found";
+    }
+    return "An error occurred while loading the asset";
   });
   return data;
 }, undefined)
@@ -79,8 +83,9 @@ function cancelSwap() {
 <template>
   <div class="grid grid-cols-4 2xl:grid-cols-6">
     <div class="col-span-3 2xl:col-span-5">
-      <BreadcrumbsBar class="mt-1.5 ml-20" />
-      <div class="m-4" v-if="info !== undefined">
+      <BreadcrumbsBar class="mt-1.5 ml-4" />
+      <LoadFailed v-if="currentLoadError" :message="currentLoadError" />
+      <div class="m-4" v-else-if="info !== undefined">
         <div class="flex">
           <div class="flex flex-col grow">
             <div class="flex flex-row gap-2">
@@ -112,7 +117,7 @@ function cancelSwap() {
         </div>
       </div>
     </div>
-    <div class="flex flex-col shadow-lg h-screen sticky top-0">
+    <div class="flex flex-col shadow-lg h-[calc(100vh-3.5rem)] sticky top-14">
       <!-- Cart -->
       <div class="transition-all duration-300">
         <div class="bg-linear-to-b from-0% to-100% bg-primary/40 transition-all duration-300 p-4">

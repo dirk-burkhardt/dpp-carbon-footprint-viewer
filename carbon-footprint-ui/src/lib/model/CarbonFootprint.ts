@@ -63,10 +63,10 @@ export function toCarbonFootprintData(footprint: IdTree | IdTree[], carbonFootpr
       processesForGreenhouseGasEmissionInATransportService: tcf.one(IRDI.TCF.PROCESSES_FOR_GREENHOUSE_GAS_EMISSION_IN_A_TRANSPORT_SERVICE, "TCFProcessesForGreenhouseGasEmissionInATransportService").as((v) => {
         const value = v.data?.value;
         if (!value) {
-          ErrorClient.add({
-            message: `The asset does not specify whether its calculations encompass Well-to-Tank, Tank-to-Wheel, or both`,
-            details: 'The value of TCFProcessesForGreenhouseGasEmissionInATransportService does not exist, therefore the analysis handles the missing value as Well-to-Wheel'
-          });
+          ErrorClient.warn(
+            'The asset does not specify whether its calculations encompass Well-to-Tank, Tank-to-Wheel, or both',
+            'The value of TCFProcessesForGreenhouseGasEmissionInATransportService does not exist, therefore the analysis handles the missing value as Well-to-Wheel'
+          );
           console.warn("Value of TCFProcessesForGreenhouseGasEmissionInATransportService does not exist: Assuming multiple values and thus WTW");
           return "WTW - Well-to-Wheel";
         }

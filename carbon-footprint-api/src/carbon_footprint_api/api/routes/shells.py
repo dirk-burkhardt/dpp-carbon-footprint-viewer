@@ -31,6 +31,18 @@ def _require_submodel(repo: Repository, aas_id: str, submodel_id: str) -> None:
         raise ApiError(HTTPStatus.NOT_FOUND, "Submodel not found")
 
 
+@router.get(
+    "/concept-descriptions/{cdIdentifier}",
+    description="Returns a specific Concept Description from the loaded files",
+    responses={404: ERROR_RESPONSE},
+)
+def get_concept_description(repo: Repository, cdIdentifier: str = Path(description="UTF8-BASE64-URL-encoded id")):
+    cd = repo.get_concept_description(decode_id(cdIdentifier, "cdIdentifier"))
+    if cd is None:
+        raise ApiError(HTTPStatus.NOT_FOUND, "Concept Description not found")
+    return cd
+
+
 @router.get("/shell-descriptors", description="Returns all Asset Administration Shell Descriptors")
 def get_shell_descriptors(repo: Repository):
     return {"result": repo.shell_descriptors(), "paging_metadata": {"cursor": None}}

@@ -21,6 +21,75 @@ from .base import Source
 logger = logging.getLogger(__name__)
 
 
+@dataclass(frozen=True)
+class SearchMatch:
+    """Fundstelle der Volltextsuche: Submodel (idShort), idShortPath des Elements und gefundener Text."""
+
+    submodel: Optional[str]
+    path: str
+    text: str
+
+
+@dataclass(frozen=True)
+class SearchHit:
+    """Shell mit ihren ersten Fundstellen und der Gesamtzahl der Fundstellen."""
+
+    id: str
+    global_asset_id: Optional[str]
+    id_short: Optional[str]
+    matches: list[SearchMatch]
+    total: int
+
+
+# Schlüssel, deren Inhalt die Volltextsuche nicht durchsucht (Metadaten, Verweise, Typangaben)
+_SEARCH_SKIP_KEYS = frozenset(
+    {
+        "semanticId",
+        "supplementalSemanticIds",
+        "embeddedDataSpecifications",
+        "qualifiers",
+        "extensions",
+        "administration",
+        "contentType",
+        "valueType",
+        "valueTypeListElement",
+        "typeValueListElement",
+        "semanticIdListElement",
+        "modelType",
+        "kind",
+        "category",
+        "language",
+        "type",
+        "keys",
+        "first",
+        "second",
+        "valueId",
+        "submodels",
+        "defaultThumbnail",
+    }
+)
+
+
+def _search_texts(node: object, path: str) -> Iterable[tuple[str, str]]:
+    """Liefert (idShortPath, Text) für alle durchsuchbaren Texte eines Elements und seiner Kinder."""
+    if isinstance(node, str):
+        yield path, node
+    elif isinstance(node, list):
+        for index, child in enumerate(node):
+            child_path = path
+            if isinstance(child, dict) and child.get("idShort"):
+                child_path = f"{path}.{child['idShort']}" if path else str(child["idShort"])
+            elif isinstance(child, dict) and "language" not in child:
+                child_path = f"{path}[{index}]"
+            yield from _search_texts(child, child_path)
+    elif isinstance(node, dict):
+        is_blob = getattr(node, "model_type", None) == "Blob"
+        for key, value in node.items():
+            if key in _SEARCH_SKIP_KEYS or value is None or (is_blob and key == "value"):
+                continue
+            yield from _search_texts(value, path)
+
+
 @dataclass(frozen=True, eq=False)
 class _ShellEntry:
     shell: AasObject
@@ -29,6 +98,14 @@ class _ShellEntry:
 
 
 _INDEX = re.compile(r"(\[[0-9]+\])")
+_IRDI_VERSION = re.compile(r"#\d{3}$")
+# Anhang, mit dem der AASX Package Explorer doppelte IDs eindeutig macht (z. B. 0173-1#02-ABG855#001---4BAECD89)
+_DUPLICATE_SUFFIX = re.compile(r"---[0-9A-Fa-f]{8}$")
+
+
+def _strip_irdi_version(value: str) -> str:
+    value = _DUPLICATE_SUFFIX.sub("", value.strip())
+    return value if value.lower().startswith(("http://", "https://", "urn:")) else _IRDI_VERSION.sub("", value)
 
 
 def split_id_short_path(path: str) -> list[str]:
@@ -61,6 +138,9 @@ class InMemoryAssetRepository:
         self._shells: dict[str, _ShellEntry] = {}
         self._submodels: dict[str, dict[str, AasObject]] = {}
         self._id_to_id_short: dict[str, Optional[str]] = {}
+        # ConceptDescriptions aller Dateien des Repositorys (nicht aus heruntergeladenen); die erste gewinnt
+        self._concept_descriptions: dict[str, AasObject] = {}
+        self._cd_without_version: dict[str, AasObject] = {}  # IRDI ohne Versionsanhang (#001)
         self._lock = threading.RLock()
         self._max_entry_bytes = max_entry_bytes
 
@@ -113,6 +193,11 @@ class InMemoryAssetRepository:
             for shell in shells:
                 for submodel in env.submodels:
                     self._add_submodel_to_shell(shell, submodel)
+            if not hidden:
+                for cd in env.concept_descriptions:
+                    if cd["id"]:
+                        self._concept_descriptions.setdefault(cd["id"], cd)
+                        self._cd_without_version.setdefault(_strip_irdi_version(cd["id"]), cd)
 
     def remove_shells(self, shell_ids: list[str], only_hidden: bool = True) -> None:
         """Entfernt Shells samt ihrer Submodel-Zuordnung (z. B. heruntergeladene Dateien aus dem Cache).
@@ -219,6 +304,14 @@ class InMemoryAssetRepository:
             )
         return result
 
+    def get_concept_description(self, cd_id: str) -> Optional[AasObject]:
+        """ConceptDescription zur ID; IRDIs passen auch mit anderem Versionsanhang (``#002`` statt ``#001``)."""
+        cd = self._concept_descriptions.get(cd_id)
+        return cd if cd is not None else self._cd_without_version.get(_strip_irdi_version(cd_id))
+
+    def concept_description_count(self) -> int:
+        return len(self._concept_descriptions)
+
     def submodel_refs(self, asset_id: str) -> Optional[list]:
         shell = self.get_shell(asset_id)
         return None if shell is None else shell["submodels"]
@@ -267,6 +360,43 @@ class InMemoryAssetRepository:
             else:
                 return None
         return element
+
+    def search(
+        self, query: str, include_ids: Iterable[str] = (), max_matches: int = 3, limit: int = 200
+    ) -> list[SearchHit]:
+        """Volltextsuche (ohne Beachtung der Groß- und Kleinschreibung) in Shells und allen ihren Submodels.
+
+        Durchsucht werden idShorts, Werte, mehrsprachige Texte und Beschreibungen, keine semantischen IDs oder
+        Typangaben. Versteckte (heruntergeladene) Shells werden nur durchsucht, wenn ihre ID in ``include_ids``
+        steht. Je Shell werden höchstens ``max_matches`` Fundstellen geliefert, insgesamt höchstens ``limit`` Shells.
+        """
+        needle = query.strip().casefold()
+        if not needle:
+            return []
+        included = set(include_ids)
+        with self._lock:
+            entries = list({id(e): (key, e) for key, e in self._shells.items()}.values())
+        hits: list[SearchHit] = []
+        for _, entry in entries:
+            shell = entry.shell
+            global_id = shell["assetInformation"]["globalAssetId"]
+            if entry.hidden and shell["id"] not in included and global_id not in included:
+                continue
+            matches: list[SearchMatch] = []
+            total = 0
+            sources: list[tuple[Optional[str], object]] = [(None, shell)]
+            sources += [(sm["idShort"], sm) for sm in self._submodels.get(shell["id"], {}).values()]
+            for submodel_name, source in sources:
+                for path, text in _search_texts(source, ""):
+                    if needle in text.casefold():
+                        total += 1
+                        if len(matches) < max_matches:
+                            matches.append(SearchMatch(submodel_name, path, text))
+            if total:
+                hits.append(SearchHit(shell["id"], global_id, shell["idShort"], matches, total))
+                if len(hits) >= limit:
+                    break
+        return hits
 
     def _get_attachment(self, asset_id: str, path: Optional[str]) -> Optional[bytes]:
         entry = self._shells.get(asset_id)

@@ -57,6 +57,17 @@ Vorrang.
 | `GET /api/v4/shells/{id}/asset-information/thumbnail` | Vorschaubild |
 | `GET /api/v4/external-shells/{url}` | Shells aus einer Datei unter einer öffentlichen URL laden |
 | `GET /api/v4/asset/all`, `/asset/{id}/submodel/all`, `/asset/{id}/submodel/{smId}` | Varianten mit nicht codierten IDs |
+| `GET /api/v4/products/submodel-templates` | Unterstützte IDTA-Templates und Versionen |
+| `GET /api/v4/products/{id}/templates` | Erkanntes Template, Version und Variante jedes Submodels einer Shell |
+| `GET /api/v4/products/{id}/carbon-footprint` | Carbon Footprints aller Versionen, normalisiert, mit Zusammenfassung |
+| `GET /api/v4/products/{id}/nameplate` | Hersteller und Adresse aus dem Typenschild |
+| `GET /api/v4/products/{id}/technical-data` | Technische Daten mit Namen, Einheiten und Definitionen aus den ConceptDescriptions |
+| `GET /api/v4/products/{id}/documentation` | Dokumente aus Handover Documentation / VDI 2770 |
+| `GET /api/v4/products/{id}/maintenance` | Wartungsintervalle, -schritte, Werkzeuge, Verbrauchsmaterial, Ersatzteile |
+| `GET /api/v4/products/{id}/details` | Alles zusammen: Templates, Typenschild, technische Daten, Dokumente, Wartung |
+| `GET /api/v4/concept-descriptions/{cdId}` | ConceptDescription aus den geladenen Dateien (IRDIs auch mit anderem Versionsanhang) |
+| `GET /api/v4/products/{id}/tree` | Produktbaum über alle Shells (Hierarchical Structures) mit Typenschild und Footprint |
+| `GET /api/v4/search?q=…` | Volltextsuche in allen Shells und Submodels (idShorts, Werte, Texte); je Shell die ersten Fundstellen (`max_matches`, Standard 3) und deren Gesamtzahl. Heruntergeladene Shells nur mit `include={id}` |
 | `GET /api/health` | Status, Version und Anzahl der Shells |
 
 ### Antwortformat
@@ -65,6 +76,50 @@ Die Shells und Submodels werden nicht im spezifikationskonformen AAS-JSON ausgeg
 Oberfläche erwartet: kein `modelType`, alle Felder auch mit `null`, Enums in CamelCase (`Instance`, `NotApplicable`,
 `xs:string` als `String`), Submodel-Elemente nach Typ gruppiert. Fehler kommen als JSON mit `timestamp`, `status`,
 `error`, `message` und `path`, sonstige HTTP-Fehler als Text (`Error 404 - Not Found`).
+
+### Fachliche Endpunkte (`/products`)
+
+`id` ist die `id` oder `globalAssetId` der Shell, Base64-codiert wie bei `/shells`. Die Antworten sind unabhängig von
+der Template-Version der Datei. Unterstützt werden:
+
+| Template | Versionen | Auswertung |
+|---|---|---|
+| Carbon Footprint (IDTA 02023) | 0.9, 1.0-Entwurf (Struktur 0.9 mit IDs 1/0), 1.0 bis 1.0.3 (Metamodell 3.0 und 3.1) | vollständig |
+| Digital Battery Passport – Product Carbon Footprint (IDTA 02035-3) | 1.0 bis 1.0.2 | vollständig |
+| Digital Nameplate (IDTA 02006), ZVEI Nameplate | 1.0, 2.0, 3.0 bis 3.0.3, HSU-Variante | Hersteller, Adresse |
+| Digital Battery Passport – Digital Nameplate (IDTA 02035-1) | 1.0, 1.0.1 | Hersteller, Adresse |
+| Contact Information (IDTA 02002) | 1.0 bis 1.0.4 | Adresse |
+| Hierarchical Structures enabling BoM (IDTA 02011) | 1.0, 1.1 bis 1.1.4 | Produktbaum |
+| Technical Data (IDTA 02003) | ZVEI 1.0, 1.1, 1.2, 1.2.1, Generic Frame 2.0 bis 2.0.4 | Allgemeines, Klassifikationen, Merkmale mit Einheit |
+| Handover Documentation (IDTA 02004) | VDI 2770 1.0 (ZVEI), 1.2, 2.0 bis 2.0.4 | Dokumente, Versionen, Dateien |
+| Maintenance Instructions (IDTA 02018) | 1.0 bis 1.0.2 | Intervalle, Schritte, Werkzeuge, Material, Ersatzteile |
+
+Patch-Versionen (z. B. 1.0.1 → 1.0.3) sind in den Dateien nicht unterscheidbar (gleiche SemanticId und
+Versionsangabe) und werden gemeinsam gelesen. IRDIs werden ohne Versionsanhang verglichen, Wert-IRDIs
+(`0173-1#07-…`) in ihren Text übersetzt. Submodels ohne SemanticId werden über den idShort erkannt, leere
+Template-Kopien ignoriert.
+
+Zusammenfassung des Carbon Footprints (`summary`): Einträge werden nur innerhalb derselben Berechnungsmethode
+addiert, jede Lebenszyklusphase zählt einmal (bei Überlappung wie A1-A3 neben A1, A2, A3 die feinere Aufteilung).
+Hauptmethode ist ISO 14067, sonst GHG Protocol, EN 15804, ISO 14040/14044, sonst die zuerst genannte; die übrigen
+stehen als Alternativen in `methods`. Transporte (TCF aus 0.9) werden als Phase A4 geführt und alle addiert.
+
+Wiederholte Elemente werden unabhängig von der Schreibweise erkannt (`Document01`, `Document__00__`, `Document{00}`
+oder Einträge einer SubmodelElementList). Namen, Einheiten und Wertelisten kommen aus den ConceptDescriptions der
+geladenen Dateien.
+
+### AAS- und AASX-Formate
+
+Gelesen werden AAS-Environments nach Metamodell 3.0, 3.1 und 3.2 in XML und JSON sowie AASX-Pakete nach
+IDTA-01005 3.0 bis 3.2 (Relationen mit und ohne `www.`, `data.xml`/`data.json` und `*.aas.xml`/`*.aas.json`).
+Die Tests lesen alle gültigen Beispiele (`maximal`/`minimal` jeder Klasse) der neuesten Releases 3.0.9, 3.1.2 und
+3.2.0 und prüfen, dass XML und JSON dasselbe ergeben und kein Attribut verloren geht (`tests/aas_format_examples.tar.gz`).
+Neu in 3.2 und nur ausgegeben, wenn vorhanden: `createdAt`/`updatedAt` in `administration`; `DataSpecificationUom`
+erscheint als eigener Inhaltstyp. AAS 2.0 (Wurzelelement `aasenv`) wird nicht gelesen.
+
+Welche Template-Versionen bekannt sind, steht in `src/carbon_footprint_api/submodels/known_templates.json`. Neue
+Versionen auf GitHub, auch neue Releases von Metamodell und AASX-Format, findet
+`python tools/check_idta_templates.py` im Projektordner (siehe dort).
 
 ### Verhalten bei Datenfehlern
 
@@ -78,12 +133,14 @@ Oberfläche erwartet: kein `modelType`, alle Felder auch mit `null`, Enums in Ca
 ```
 src/carbon_footprint_api/
   aas/          Lesen von AAS-XML/-JSON/-AASX ins Antwortformat, Hilfsfunktionen
+  submodels/    Versionsabhängige Parser der IDTA-Templates, normalisierte Modelle, Zusammenfassung
   repository/   Datenhaltung: Schnittstelle (AssetRepository) und In-Memory-Implementierung
-  services/     Laden von Dateien über URLs (mit SSRF-Schutz und Cache)
+  services/     Laden von Dateien über URLs (mit SSRF-Schutz und Cache), Produktsicht (Footprint, Produktbaum)
   api/          HTTP: Routen, Abhängigkeiten, Fehlerbehandlung, Middleware, statische Dateien
   config.py     Einstellungen (Kommandozeile und Umgebungsvariablen)
   main.py       Anwendungsfabrik create_app()
-tests/          pytest, inkl. Snapshot-Vergleich aller Endpunkte (snapshots.tar.gz)
+tests/          pytest, inkl. Snapshot-Vergleich aller Endpunkte (snapshots.tar.gz) und aller bekannten
+                IDTA-Templates (idta_templates.tar.gz) und Formatbeispiele (aas_format_examples.tar.gz) von GitHub
 tools/          record_snapshots.py zum Aufzeichnen der Referenzantworten
 ```
 
@@ -125,6 +182,26 @@ der Endpunkte und bestimmt das Präfix (`/api/v4`). Ein Test prüft, dass der ne
 passt.
 
 ## Changelog
+
+### 4.4.0 – 2026-11-15
+
+- Parser für Technical Data (ZVEI 1.0 bis Generic Frame 2.0.4), Handover Documentation (VDI 2770 1.0, 1.2, 2.0 bis 2.0.4) und Maintenance Instructions (1.0 bis 1.0.2) mit Endpunkten unter /products; ConceptDescriptions der Dateien werden gelesen und unter /concept-descriptions bereitgestellt; AAS-Metamodell 3.2 (createdAt/updatedAt, DataSpecificationUom) und AASX-Fallback auf data.xml/data.json
+- Kompatibilitätstests mit allen gültigen Beispielen der Metamodell-Releases 3.0.9, 3.1.2 und 3.2.0 (XML und JSON)
+  und den AASX-Beispielen 3.1/3.2
+- Prüfskript meldet auch neue Releases von aas-specs-metamodel und aas-specs-aasx
+
+### 4.3.0 – 2026-11-15
+
+- Neuer Endpunkt /search: Volltextsuche in allen Shells und Submodels
+
+### 4.2.0 – 2026-11-15
+
+- Versionsunabhängige Parser für IDTA-Submodels: Carbon Footprint 0.9, 1.0-Entwurf und 1.0 bis 1.0.3 (Metamodell 3.0/3.1) inkl. Battery-Passport-PCF, Digital Nameplate 1.0 bis 3.0.3, Contact Information, Hierarchical Structures 1.0/1.1; Erkennung von Handover Documentation und Technical Data
+- Neue Endpunkte unter `/api/v4/products`: erkannte Templates je Submodel, normalisierter Carbon Footprint mit
+  Zusammenfassung je Berechnungsmethode, Typenschild und Produktbaum über alle Shells
+- Wert-IRDIs aus ECLASS-Wertelisten werden in Text übersetzt; Submodels ohne SemanticId werden über den idShort
+  erkannt, leere Template-Kopien ignoriert
+- Tests gegen alle bekannten IDTA-Templates von GitHub (`tests/idta_templates.tar.gz`)
 
 ### 4.1.0 – 2026-11-15
 

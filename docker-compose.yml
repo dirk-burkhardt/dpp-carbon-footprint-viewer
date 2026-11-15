@@ -26,8 +26,8 @@ services:
     build:
       context: ./carbon-footprint-api
       args:
-        VERSION: "4.1.0"
-    image: dppviewer-api:4.1.0
+        VERSION: "4.4.0"
+    image: dppviewer-api:4.4.0
     environment:
       CFA_AASX: /opt/repo/*.aasx
       CFA_LOG_LEVEL: ${API_LOG_LEVEL:-INFO}
@@ -50,8 +50,8 @@ services:
     build:
       context: ./carbon-footprint-ui
       args:
-        VERSION: "1.1.0"
-    image: dppviewer-ui:1.1.0
+        VERSION: "1.2.4"
+    image: dppviewer-ui:1.2.4
     depends_on:
       api:
         condition: service_healthy

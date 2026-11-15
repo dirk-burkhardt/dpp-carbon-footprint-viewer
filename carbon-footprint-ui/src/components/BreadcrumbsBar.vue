@@ -5,6 +5,7 @@ import {
   useRouter
 } from 'vue-router'
 import { computed } from 'vue'
+import { ArrowLeftIcon } from '@heroicons/vue/24/outline'
 
 const router = useRouter();
 const routesByPath = Object.fromEntries(router.getRoutes().map((r) => [r.path, r]))
@@ -44,11 +45,19 @@ const routePath = computed(() => {
   }
   return p;
 })
+
+// Ziel des Zurück-Pfeils: der vorletzte Eintrag der Brotkrümel
+const backRoute = computed(() => (routePath.value.length > 1 ? routePath.value[routePath.value.length - 2][0] : undefined))
 </script>
 <template>
-  <div class="breadcrumbs">
-    <ul>
-      <li v-for="([route, breadcrumb], i) of routePath" :key="i"><router-link :to="route">{{ breadcrumb }}</router-link></li>
-    </ul>
+  <div class="flex items-center gap-2">
+    <router-link v-if="backRoute" :to="backRoute" class="btn btn-ghost btn-sm btn-square" title="Back">
+      <ArrowLeftIcon class="h-5" />
+    </router-link>
+    <div class="breadcrumbs">
+      <ul>
+        <li v-for="([route, breadcrumb], i) of routePath" :key="i"><router-link :to="route">{{ breadcrumb }}</router-link></li>
+      </ul>
+    </div>
   </div>
 </template>

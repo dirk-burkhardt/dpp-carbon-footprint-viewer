@@ -75,6 +75,7 @@ const shellId = computed(() => props.shell instanceof CarbonTree ? props.shell.a
         :show-diff="showDiff"
         compact
       />
+      <slot />
       <div class="card-actions" v-if="toButton">
         <router-link :to="toButton" class="btn btn-block btn-secondary/10" :class="props.compact ? 'btn-xs' : 'btn-sm'" target="_blank">{{ toButtonText }}</router-link>
       </div>

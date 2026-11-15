@@ -224,7 +224,7 @@ function buildPlot(data: ComponentEntry[]) {
         x: ([_, total]) => total,
         textAnchor: 'start',
         dx: 5,
-        fill: 'black'
+        fill: 'currentColor'
       }),
       Plot.text(Object.entries(totalPerIndex).filter(labelLeft), {
         text: ([index]) => namePerIndex[index],
@@ -240,7 +240,7 @@ function buildPlot(data: ComponentEntry[]) {
         x: 0,
         textAnchor: 'end',
         dx: -10,
-        fill: 'black'
+        fill: 'currentColor'
       }),
     ]
   })

@@ -135,7 +135,7 @@ export default class SimpleStackedBarDiagram {
         )}
       )
       .attr("fill", "none")
-      .attr("stroke", "black")
+      .attr("stroke", "currentColor")
       .attr("stroke-width", strokeWidth.toString(10))
       .attr("stroke-linecap", "round")
     this.svg.append("g")
@@ -172,7 +172,7 @@ export default class SimpleStackedBarDiagram {
       20
     ))
       .attr("fill", "none")
-      .attr("stroke", "black")
+      .attr("stroke", "currentColor")
       .attr("stroke-width", "1")
       .attr("stroke-linecap", "round")
       .attr("transform", "scale(-1,1)")

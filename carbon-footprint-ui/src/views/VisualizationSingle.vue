@@ -6,7 +6,8 @@ import { useRoute } from 'vue-router'
 import { computed, inject, type Ref } from 'vue'
 import { diffToString, generateColor, loadFullAssetInfo, simulationFromRoute } from '@/lib/util'
 import { computedAsync } from '@vueuse/core'
-import { BackOnErrorHandler } from '@/lib/BackOnErrorHandler'
+import { BackOnErrorHandler, currentLoadError } from '@/lib/BackOnErrorHandler'
+import LoadFailed from '@/components/layout/LoadFailed.vue'
 import { assetIdMapKey } from '@/lib/injectionKeys'
 import { AssetIdMap } from '@/lib/AssetIdMap'
 import BreadcrumbsBar from '@/components/BreadcrumbsBar.vue'
@@ -17,12 +18,10 @@ import {
   CloudIcon,
   CubeIcon,
   CubeTransparentIcon,
-  CursorArrowRaysIcon,
   PuzzlePieceIcon,
   ArrowPathIcon
 } from '@heroicons/vue/24/outline'
 import InfoBox from '@/components/InfoBox.vue'
-import SingleFallbackLinkCard from '@/components/SingleFallbackLinkCard.vue'
 import { storageRef } from '@/lib/storage'
 // PresentationChartBarIcon CircleStackIcon CogIcon
 const route = useRoute();
@@ -35,9 +34,12 @@ const info = computedAsync<Awaited<ReturnType<typeof loadFullAssetInfo> | undefi
   }
   return BackOnErrorHandler.bind(loadFullAssetInfo(route.params.asset as string, idMap.value, "url-", () => {}, simulationFromRoute(route)), (e) => {
     if (e.status === 422) {
-      return ["The URL to the asset is invalid or does not point to a valid asset", "Check the link"]
+      return "The URL to the asset is invalid or does not point to a valid asset";
     }
-    return ["An error occurred while loading the asset", "Try another asset"];
+    if (e.status === 404) {
+      return "The asset could not be found";
+    }
+    return "An error occurred while loading the asset";
   });
 }, undefined)
 
@@ -49,13 +51,14 @@ const showSimulation = computed(() => info.value?.carbonTree?.hasChanges && rout
 </script>
 
 <template>
-  <div class="ml-20 bg-base-100 shadow-lg shadow-base-100 pt-1.5 z-50 relative">
+  <div class="px-4 py-1 bg-base-100 border-b border-base-300 relative z-30">
     <BreadcrumbsBar />
   </div>
-  <div class="flex w-full">
+  <LoadFailed v-if="currentLoadError" :message="currentLoadError" />
+  <div class="flex w-full" v-else>
     <!-- Left hand tabs -->
-    <div class="page-tabs bottom-10 pt-20 pb-14 -mt-12" :class="{'min-w-72': expandTabs }">
-      <button class="absolute right-2 top-14" @click="expandTabs = !expandTabs"><ChevronDoubleRightIcon class="w-4" v-if="!expandTabs" /><ChevronDoubleLeftIcon class="w-4" v-else /></button>
+    <div class="page-tabs pt-10 pb-4" :class="{'min-w-72': expandTabs }">
+      <button class="absolute right-2 top-3" :title="expandTabs ? 'Collapse' : 'Expand'" @click="expandTabs = !expandTabs"><ChevronDoubleRightIcon class="w-4" v-if="!expandTabs" /><ChevronDoubleLeftIcon class="w-4" v-else /></button>
       <div class="page-tabs-container" v-if="info">
         <router-link
           class="page-tab h-1/4"
@@ -197,7 +200,7 @@ const showSimulation = computed(() => info.value?.carbonTree?.hasChanges && rout
 
       <!-- Bar indicating that this is a simulation -->
       <Transition>
-        <div class="sticky top-4 duration-200 px-4 z-50" v-if="showSimulation">
+        <div class="sticky top-16 duration-200 px-4 z-30" v-if="showSimulation">
           <div class="alert alert-warning shadow-sm">
             <strong>Simulation</strong>
             <span>
@@ -213,34 +216,8 @@ const showSimulation = computed(() => info.value?.carbonTree?.hasChanges && rout
         <component :is="Component" :info="info" />
       </router-view>
 
-      <!-- Footer navigating to other views -->
+      <!-- Debug information -->
       <div class="grid grid-cols-6 gap-4 m-4" v-if="info">
-        <h2 class="col-span-6 text-3xl font-light text-center py-4">More
-          <CursorArrowRaysIcon class="inline-block h-10" />
-        </h2>
-        <SingleFallbackLinkCard :to="{ name: 'visualization.single.components', params: { asset: route.params.asset } }" class="text-accent border-accent">
-          <PuzzlePieceIcon class="h-10 mx-auto mb-2" />
-          <div class="text-base-content">
-            <strong>Components</strong><br />
-            Is one responsible for most of the products footprint?
-          </div>
-        </SingleFallbackLinkCard>
-        <SingleFallbackLinkCard :to="{ name: 'visualization.single.lifecycle', params: { asset: route.params.asset } }" class="text-secondary border-secondary">
-          <CloudIcon class="h-10 mx-auto mb-2" />
-          <div class="text-base-content">
-            <strong>Life Cycles</strong><br />
-            Which phases add how much to the carbon footprint? How much is emitted during transport?
-          </div>
-        </SingleFallbackLinkCard>
-        <SingleFallbackLinkCard :to="{ name: 'visualization.single.simulation', params: { asset: route.params.asset } }" class="text-primary border-primary">
-          <ArrowPathIcon class="h-10 mx-auto mb-2" />
-          <div class="text-base-content">
-            <strong>Simulation</strong><br />
-            Simulate the swap of one or multiple sub-components.
-          </div>
-        </SingleFallbackLinkCard>
-
-        <!-- Debug information -->
         <div class="collapse col-span-6 bg-base-200/30">
           <input type="checkbox" />
           <div class="collapse-title">Debug Info</div>

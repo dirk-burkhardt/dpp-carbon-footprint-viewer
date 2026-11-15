@@ -93,9 +93,13 @@ def _find_spec_parts(zf: zipfile.ZipFile, max_bytes: int) -> list[str]:
         logger.warning("AASX-Paket verweist auf fehlende Environments: %s", ", ".join(missing))
         parts = [p for p in parts if p in names]
     if not parts:
-        # Fallback für Pakete mit fehlenden oder ungültigen Relationen (z. B. umbenannte .aas.xml)
-        parts = [n for n in zf.namelist() if n.lower().endswith((".aas.xml", ".aas.json"))]
-    return list(dict.fromkeys(parts))
+        # Fallback für Pakete mit fehlenden oder ungültigen Relationen (z. B. umbenannte .aas.xml). AASX 3.x
+        # empfiehlt aasx/data.xml bzw. aasx/data.json, ältere Pakete nutzen *.aas.xml / *.aas.json.
+        lowered = {n: n.lower() for n in zf.namelist()}
+        parts = [n for n, low in lowered.items() if low.endswith((".aas.xml", ".aas.json"))]
+        parts += [n for n, low in lowered.items() if low.rsplit("/", 1)[-1] in ("data.xml", "data.json")]
+    # Dasselbe Environment kann in mehreren Formaten beiliegen (data.xml und data.json); XML hat Vorrang
+    return sorted(dict.fromkeys(parts), key=lambda p: not p.lower().endswith(".xml"))
 
 
 def read_aasx(data: bytes, max_entry_bytes: int = DEFAULT_MAX_ENTRY_BYTES) -> Environment:
@@ -105,7 +109,8 @@ def read_aasx(data: bytes, max_entry_bytes: int = DEFAULT_MAX_ENTRY_BYTES) -> En
             parts = _find_spec_parts(zf, max_entry_bytes)
             if not parts:
                 raise AasParseError("AASX-Paket enthält kein AAS-Environment")
-            if len(parts) > 1:
+            stems = {p.rsplit(".", 1)[0] for p in parts}
+            if len(stems) > 1:
                 logger.warning("AASX-Paket enthält mehrere Environments, verwende %s", parts[0])
             part = parts[0]
             content = _read_entry(zf, part, max_entry_bytes)

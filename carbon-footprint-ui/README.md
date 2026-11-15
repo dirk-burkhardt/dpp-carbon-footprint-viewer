@@ -78,6 +78,40 @@ Laufzeitkonfiguration über `run.sh` aus den Umgebungsvariablen `ASSET_ADMINISTR
 
 ## Changelog
 
+### 1.2.4 – 2026-11-15
+
+- Favicon und App-Symbole zeigen das CLiCE-DiPP-Logo (Lupe mit Blatt-Etikett)
+- Datasheet: lange Asset-Namen in der Kopfzeile werden gekürzt, der volle Name erscheint beim Überfahren
+
+### 1.2.3 – 2026-11-15
+
+- Datasheet scrollt bei vielen Assets waagerecht, die linke Spalte mit den Bezeichnungen bleibt dabei stehen
+
+### 1.2.2 – 2026-11-15
+
+- Datasheet zeigt alle Favoriten, auch ohne CO2-Daten (Zellen mit „no data“); ein nicht ladbares Asset blockiert nicht mehr das ganze Datasheet
+- Favoritenbox: Compare und Datasheet mit Symbolen, durch Linien vom Titel abgesetzt; Favoriten in einem eigenen, helleren Bereich
+- Statussymbol auf der Startseite rechts unten statt mittig unter den Favoriten
+- Fehlertabelle standardmäßig etwa ein Drittel der Fensterhöhe, kompaktere Zeilen, Scrollen ohne Mitscrollen der Seite
+
+### 1.2.1 – 2026-11-15
+
+- Karte der Übersicht schiebt sich beim Scrollen nicht mehr über die Kopfzeile
+- Doppelte Auswahl „More“ (Components, Life Cycles, Simulation) samt Symbol unter der Einzelansicht entfernt, die Navigation links genügt
+- Dunkelmodus: Beschriftungen und Linien der Diagramme in Overview, Components, Life Cycles und Simulation in der Schriftfarbe des Themas statt Schwarz; Adressfeld auf der Karte besser lesbar
+- Fehlertabelle höher (45 % der Fensterhöhe), am oberen Rand in der Höhe verstellbar, größere Schrift
+- Abweichende Berechnungen (CO2eq der Komponenten höher als das des Assets, fehlende Angabe Well-to-Tank/Tank-to-Wheel) erscheinen als Warnung statt als Fehler
+
+### 1.2.0 – 2026-11-15
+
+- Neue Gestaltung: Kopfzeile mit Logo, Suche (optional innerhalb der Schalen), Hell/Dunkel und Info; linke Spalte entfällt
+- Favoriten per Drag-and-drop sortierbar, in der Favoritenbox die Analysen Compare (die ersten beiden Favoriten) und Datasheet (alle Favoriten); bisherige Favoriten werden übernommen
+- Compare als grafischer Vergleich zweier Assets nach dem Konzept der Thesis (Balken in zwei Richtungen um eine Nulllinie, Absolutwerte oder Differenz, Transport und Produkt je Lebenszyklusphase)
+- Datasheet ohne eigenes Hinzufügen von Schalen, kompakteres Layout; Summe der Lebenszyklusphasen aus Komponenten korrigiert (Stückzahlen wurden teils doppelt bzw. gar nicht berücksichtigt)
+- Klick auf eine Schale öffnet die Einzelansicht, die Auswahlschaltflächen beim Überfahren entfallen; gelber Rahmen nur noch bei Favoriten
+- Statussymbol (OK, Warnungen, Fehler mit Anzahl) unter den Favoriten, auf anderen Seiten unten rechts; Klick öffnet eine kompakte Tabelle, gleiche Meldungen werden zusammengefasst
+- Globale Fehlermeldung oben entfernt: Ladefehler erscheinen nur noch in der betroffenen Ansicht, auch wenn die Anfrage erst nach einem Seitenwechsel scheitert
+
 ### 1.1.0 – 2026-11-15
 
 - Betrieb als Docker-Container mit nginx: Weiterleitung von /api an die API, Laufzeitkonfiguration und Content-Security-Policy aus Umgebungsvariablen, Sicherheits-Header, Caching, Begrenzung der Downloads über URLs; Adresssuche mit GEOCODING_URL=off abschaltbar

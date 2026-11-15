@@ -1,58 +1,59 @@
+/**
+ * Fehler beim Laden der Assets einer Ansicht.
+ *
+ * Ein Fehler wird der Route zugeordnet, auf der das Laden begonnen hat. So erscheint er nur in dieser Ansicht
+ * (als Hinweis anstelle des Inhalts), auch wenn die Anfrage erst nach einem Seitenwechsel scheitert. Zusätzlich
+ * landet er in der Fehlerliste der Statusanzeige.
+ */
+import { computed, reactive } from 'vue'
+import router from '@/router'
+import { ErrorClient } from '@/lib/ErrorDataHandler'
+
+type Message = string | [string] | [string, string]
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+type MessageFactory = (reason: any) => Message | false
+
+/** Fehlermeldungen je Routenpfad */
+const loadErrors = reactive<Record<string, string>>({})
+
+// Beim Verlassen einer Ansicht deren Fehler vergessen, beim erneuten Aufruf wird neu geladen
+router.afterEach((to, from) => {
+  if (to.fullPath !== from.fullPath) {
+    delete loadErrors[from.fullPath]
+  }
+})
+
+/** Fehlermeldung der aktuellen Ansicht, undefined wenn alles geladen werden konnte */
+export const currentLoadError = computed(() => loadErrors[router.currentRoute.value.fullPath])
+
 export class BackOnErrorHandler {
   /**
-   * Whether an error handler was registered
-   * @private
+   * Meldet einen Fehler des Promises für die aktuelle Ansicht.
+   * @param promise Ladevorgang
+   * @param message Meldung oder Funktion, die aus dem Fehler eine Meldung erzeugt (false: nicht melden)
    */
-  private static registered = false
-  /**
-   * Pending errors which occured before a handler was registered
-   * @private
-   */
-  private static pendingMessage: [string, string] | [string] | null = null;
-
-  /**
-   * Set the error handler
-   * @param newErrorFunction new error handler
-   */
-  static set errorFunction (newErrorFunction: (error: string, message?: string) => void) {
-    if (BackOnErrorHandler.registered) {
-      console.error("BackOnError already set. Ignoring new errorFunction.")
-    }
-    this.handler = newErrorFunction
-    if (this.pendingMessage) {
-      newErrorFunction(this.pendingMessage[0], this.pendingMessage[1]);
-    }
-    this.registered = true
-  }
-
-  static handler (error: string, backButton?: string) {
-    this.pendingMessage = backButton ? [error, backButton] : [error];
-  }
-
-  /**
-   * Add an error to handle
-   * @param promise
-   * @param message
-   */
-  static bind<T> (promise: Promise<T>, message?: string | [string] | [string, string] | ((reason: any) => string | [string] | [string, string] | false)): Promise<T> {
+  static bind<T> (promise: Promise<T>, message?: Message | MessageFactory): Promise<T> {
+    const path = router.currentRoute.value.fullPath
     promise.catch((reason) => {
-      if (message === undefined) {
-        BackOnErrorHandler.handler("An error occurred");
-        return;
+      let resolved: Message | false = message === undefined ? 'An error occurred' : (message as Message)
+      if (typeof message === 'function') {
+        resolved = message(reason)
       }
-      if (typeof message === "function") {
-        const returnValue = message(reason);
-        if (returnValue === false) {
-          return;
-        }
-        message = returnValue
+      if (resolved === false) {
+        return
       }
-      if (typeof message === "string") {
-        message = [message];
+      const [title] = typeof resolved === 'string' ? [resolved] : resolved
+      ErrorClient.add({
+        message: title,
+        details: reason instanceof Error ? reason.message : (reason?.message ?? undefined),
+        status: typeof reason?.status === 'number' ? reason.status : undefined,
+        trace: reason instanceof Error ? reason.stack : undefined,
+      })
+      // Nur merken, wenn die Ansicht noch angezeigt wird
+      if (router.currentRoute.value.fullPath === path) {
+        loadErrors[path] = title
       }
-      console.error(message[0], message[1], reason);
-      BackOnErrorHandler.handler(message[0], message[1]);
     })
-    return promise;
+    return promise
   }
 }

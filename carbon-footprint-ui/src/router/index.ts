@@ -79,8 +79,8 @@ const router = createRouter({
       name: "visualization.dual",
       component: () => import("../views/VisualizationDual.vue"),
       meta: {
-        back: (r) => ({ name: "datasheet", params: { assets: [r.params.first as string, r.params.second as string] }}),
-        breadcrumb: "Overview of Two Assets"
+        back: "home",
+        breadcrumb: "Compare"
       }
     },
     {

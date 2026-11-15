@@ -29,6 +29,9 @@ version = { attr = "carbon_footprint_api.__version__" }
 [tool.setuptools.packages.find]
 where = ["src"]
 
+[tool.setuptools.package-data]
+carbon_footprint_api = ["submodels/*.json"]
+
 [tool.pytest.ini_options]
 testpaths = ["tests"]
 pythonpath = ["src", "tests"]

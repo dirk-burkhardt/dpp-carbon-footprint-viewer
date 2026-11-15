@@ -69,7 +69,7 @@ const lifeCyclePhases = computed(() => {
   <div class="m-4 gap-4 grid grid-cols-6">
     <div class="card h-72 relative rounded-lg" v-if="props.info.address" :class="!thumbnailHidden ? 'col-span-4' : 'col-span-6'">
       <div class="absolute bottom-6 text-center left-0 right-0 z-10">
-        <div class="inline-block m-auto bg-base-100/30 p-2 rounded-sm backdrop-blur">{{ info.address }}</div>
+        <div class="inline-block m-auto bg-base-100/80 p-2 rounded-sm backdrop-blur">{{ info.address }}</div>
       </div>
       <figure class="grow">
         <AddressMap

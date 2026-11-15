@@ -100,12 +100,9 @@ tr:hover > td {
   @apply relative;
   &::before {
     @apply absolute inset-0 pointer-events-none;
-    background-color: rgba(0, 0, 0, calc(var(--bg-alpha)));
+    background-color: color-mix(in oklab, var(--color-primary) calc(var(--bg-alpha, 0) * 100%), transparent);
     content: "";
   }
-}
-.hover-with-before:hover > *::before {
-  background-color: rgba(0, 0, 0, .05);
 }
 
 input[type=number].hide-controls::-webkit-inner-spin-button,
@@ -153,7 +150,7 @@ table.table-pin-next-to-last tr > *:nth-last-child(2) {
 }
 
 .page-tabs {
-  @apply h-screen max-h-full shrink sticky top-0 bottom-0 border-r-2 border-r-primary;
+  @apply h-[calc(100vh-3.5rem)] max-h-full shrink sticky top-14 bottom-0 border-r-2 border-r-primary;
 
   .page-tabs-container {
     @apply flex flex-col gap-2 h-full mx-2;
@@ -176,9 +173,40 @@ table.table-pin-next-to-last tr > *:nth-last-child(2) {
   }
 }
 
+/* Tabellenzellen ignorieren min-width; feste Spaltenbreite, damit die Tabelle bei vielen Spalten breiter als der
+   Bildschirm wird und waagerecht scrollt statt die Spalten zusammenzudrücken */
 .table-data {
+  @apply w-max min-w-full;
 
   td {
-    @apply min-w-40 max-w-52 break-words;
+    @apply w-56 min-w-56 max-w-64 break-words;
   }
+
+  th {
+    @apply w-48 min-w-48 max-w-56;
+  }
+
+  /* Feste linke Spalte deckend über den darunter gescrollten Zellen (auch über deren Farbfläche ::before) */
+  tbody th {
+    @apply z-10 bg-base-100;
+  }
+
+  thead th {
+    @apply z-20;
+  }
+
+  /* Trennlinie rechts an der festen Spalte (ein Rahmen würde beim Scrollen mitwandern) */
+  th:first-child {
+    box-shadow: inset -1px 0 0 color-mix(in oklab, var(--color-base-content) 20%, transparent);
+  }
+}
+
+/* Diagramme im Dunkelmodus: Texte ohne eigene Farbe und Plot-Hintergründe (z. B. Tooltips) folgen dem Thema.
+   Plot-Diagramme ausgenommen, Plot setzt die Textfarbe an der Gruppe statt am Text. */
+svg:not([class*="plot-"]) text:not([fill]) {
+  fill: currentColor;
+}
+[class^="plot-"],
+[class*=" plot-"] {
+  --plot-background: var(--color-base-100);
 }

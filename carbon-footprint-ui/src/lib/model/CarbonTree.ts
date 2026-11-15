@@ -336,10 +336,10 @@ export default class CarbonTree extends EventTarget implements CarbonTreeType<Ca
     }
     if (originalChildrenProductCo2eq > this.asset.footprint.productCo2eq) {
       console.warn("product co2eq mismatch between own footprint and calculated sub footprints")
-      ErrorClient.add({
-        message: "Mismatch between asset CO2eq and its components CO2eq",
-        details: `The asset's (${this.displayNames[0]}) CO2eq is lower than the sum of its components CO2eqs. (1)`,
-      })
+      ErrorClient.warn(
+        "Mismatch between asset CO2eq and its components CO2eq",
+        `The asset's (${this.displayNames[0]}) CO2eq is lower than the sum of its components CO2eqs. The sum of the components is used.`,
+      )
       return originalChildrenProductCo2eq;
     }
     return this.asset.footprint.productCo2eq;
@@ -352,10 +352,10 @@ export default class CarbonTree extends EventTarget implements CarbonTreeType<Ca
     }
     const originalChildrenCo2eq = this.originalChildrenProductCo2eq || 0;
     if (originalChildrenCo2eq > this.asset.footprint.productCo2eq) {
-      ErrorClient.add({
-        message: "Mismatch between asset CO2eq and its components CO2eq",
-        details: `The asset's (${this.displayNames[0]}) CO2eq is lower than the sum of its components CO2eqs. (2)`,
-      })
+      ErrorClient.warn(
+        "Mismatch between asset CO2eq and its components CO2eq",
+        `The asset's (${this.displayNames[0]}) CO2eq is lower than the sum of its components CO2eqs. The sum of the components is used.`,
+      )
       return childrenCo2eq - originalChildrenCo2eq;
     }
     return this.asset.footprint.productCo2eq + childrenCo2eq - originalChildrenCo2eq;

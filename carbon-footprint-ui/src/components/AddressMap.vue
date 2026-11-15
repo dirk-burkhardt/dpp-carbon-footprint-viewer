@@ -1,5 +1,6 @@
 <template>
-  <div class="relative flex-1">
+  <!-- isolate: Leaflet nutzt z-index bis 1000, der darf nicht über die Kopfzeile reichen -->
+  <div class="relative flex-1 isolate">
     <div ref="mapContainer" class="h-full w-full" :class="{ 'map-dark': darkMode }"></div>
     <div
       v-if="notFound"

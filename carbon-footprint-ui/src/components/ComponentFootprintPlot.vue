@@ -106,7 +106,7 @@ function makePlot() {
         x: (d) => d.co2eq,
         textAnchor: "start",
         dx: 5,
-        fill: "black"
+        fill: "currentColor"
       }),
       Plot.text(data, {
         text: (d) => convertGrams(d.co2eq, "kg", toUnit).toLocaleString(undefined, { maximumFractionDigits: 2 }) + toUnit,
@@ -115,7 +115,7 @@ function makePlot() {
         x: 0,
         textAnchor: "end",
         dx: -10,
-        fill: "black"
+        fill: "currentColor"
       })
     ]
   })

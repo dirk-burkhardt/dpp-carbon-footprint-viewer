@@ -1,7 +1,7 @@
 
 <script setup lang="ts">
 import CarbonTree from '@/lib/model/CarbonTree'
-import { storageRef } from '@/lib/storage'
+import { favoriteIds } from '@/lib/favorites'
 import { computed, inject, type Ref, ref, watch } from 'vue'
 import ShellCard from '@/components/ShellCard.vue'
 import type { ShellDescriptionSmallInterface } from '@/lib/api/shellTypes'
@@ -50,10 +50,9 @@ const hiddenShells = computed<boolean[] | undefined>(() => {
   )
 })
 
-const favorites = storageRef<{ [globalAssetId: string]: boolean }>("selectedShellsById", {})
+const favorites = computed(() => Object.fromEntries(favoriteIds.value.map((id) => [id, true])) as Record<string, boolean>)
 const modalShells = computed(() => {
   return descriptions?.value?.filter((_, i) => !hiddenShells.value?.[i]).sort((a, b) => {
-    console.log(a, favorites.value);
     if (favorites.value?.[a.globalAssetId] === favorites.value?.[b.globalAssetId]) {
       return 0;
     }

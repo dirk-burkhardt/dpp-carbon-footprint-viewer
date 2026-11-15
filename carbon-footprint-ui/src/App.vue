@@ -1,18 +1,19 @@
 <script setup lang="ts">
 import { RouterView, useRouter } from 'vue-router'
-import ErrorLog from '@/components/ErrorLog.vue'
-import LogoSVG from '@/assets/CLiCE-DiPP.svg'
+import AppHeader from '@/components/layout/AppHeader.vue'
+import StatusIndicator from '@/components/layout/StatusIndicator.vue'
+import ProblemPanel from '@/components/layout/ProblemPanel.vue'
+import '@/lib/problems'
+import { externalShellIds } from '@/lib/search'
 import { storageRef } from '@/lib/storage'
-import { type Component, computed, provide, ref, watch } from 'vue'
+import { type Component, provide, ref, watch } from 'vue'
 import { allDescriptionsFromApi } from '@/lib/api/registry'
 import { ErrorClient } from '@/lib/ErrorDataHandler'
 import { darkModeKey, shellDescriptionsKey, assetIdMapKey, externalShellsKey, helpBarKey } from '@/lib/injectionKeys'
-import BackOnError from '@/components/BackOnError.vue'
 import { computedAsync } from '@vueuse/core'
 import { AssetIdMap } from '@/lib/AssetIdMap'
 import shellRepo from '@/lib/api/shells'
 import type { components } from '@/lib/api/AssetAdministrationShellRepository'
-import { ArrowLeftIcon } from '@heroicons/vue/24/outline'
 import GlobalContextMenuComponent from '@/components/GlobalContextMenuComponent.vue'
 import HelpBar from '@/components/HelpBar.vue'
 import { decodeBase64 } from '@/lib/encoding'
@@ -94,20 +95,13 @@ watch(() => router.currentRoute.value.query.preload, (encodedUrls) => {
   immediate: true
 })
 
-// Route of the top left back arrow
-const backRoute = computed(() => {
-  let { back } = router.currentRoute.value.meta;
-  if (typeof back !== "string" && typeof back !== "function" && typeof back !== "object" || back === null) {
-    return undefined;
-  }
-  if (typeof back === "function") {
-    back = back(router.currentRoute.value);
-  }
-  if (typeof back === "string") {
-    return { name: back };
-  }
-  return back;
-})
+// IDs der heruntergeladenen Shells, damit die Suche innerhalb der Schalen auch sie durchsucht
+watch(externalShells, (shells) => {
+  externalShellIds.value = Object.values(shells)
+    .filter(Array.isArray)
+    .flat()
+    .map((shell) => shell.id)
+}, { deep: true })
 
 // Right hand help bar content
 const helpBarContent = ref<Component>();
@@ -116,33 +110,15 @@ provide(helpBarKey, helpBarContent);
 </script>
 
 <template>
-  <div class="my-2 mx-4 fixed z-50" :class="backRoute ? 'w-10 h-10' : 'w-16'">
-      <router-link
-        v-if="backRoute"
-        type="button"
-        class="block w-10 h-10 p-2 bg-base-100 box-border rounded-sm border border-1 drop-shadow-sm active:drop-shadow-none"
-        :to="backRoute"
-      >
-        <ArrowLeftIcon />
-      </router-link>
-      <router-link v-else to="/" title="CLiCE-DiPP" class="block my-2">
-        <img
-          :src="LogoSVG"
-          alt="CLiCE-DiPP logo"
-          class="w-full"
-          :class="{ 'bg-white/90 rounded-sm p-0.5': useDarkTheme }"
-        />
-      </router-link>
-  </div>
-  <div class="fixed bottom-0 py-2 px-4 z-50">
-    <input type="checkbox" class="toggle" v-model="useDarkTheme" />
-  </div>
-
+  <AppHeader />
   <HelpBar />
   <GlobalContextMenuComponent />
-  <BackOnError />
-  <div class="grow">
+  <main class="grow">
     <RouterView :key="JSON.stringify([$route.name, $route.params])" />
+  </main>
+  <!-- Auf der Startseite sitzt die Statusanzeige unter den Favoriten -->
+  <div v-if="$route.name !== 'home'" class="fixed bottom-3 right-3 z-40 bg-base-100 rounded-full shadow-md">
+    <StatusIndicator small />
   </div>
-  <ErrorLog />
+  <ProblemPanel />
 </template>

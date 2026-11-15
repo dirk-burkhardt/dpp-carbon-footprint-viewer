@@ -1,148 +1,74 @@
 <script setup lang="ts">
 /**
- * Multi-Asset Data sheet and comparison
+ * Multi-Asset Data Sheet: exakte Werte mehrerer Assets nebeneinander, mit Stückzahl je Asset und einer
+ * Spalte mit der Summe (Combined). Numerische Zellen sind je Zeile farblich normalisiert.
+ * Die Assets kommen aus den Favoriten (Startseite).
  */
 import { useRoute } from 'vue-router'
 import { computed, inject, onUnmounted, type Ref, ref, watch } from 'vue'
-import { BackOnErrorHandler } from '@/lib/BackOnErrorHandler'
 import { computedAsync } from '@vueuse/core'
+import { sum } from 'lodash'
+import { ArrowTopRightOnSquareIcon, XMarkIcon } from '@heroicons/vue/24/outline'
+import { BackOnErrorHandler, currentLoadError } from '@/lib/BackOnErrorHandler'
 import { convertGrams, grams, loadFullAssetInfo, or, simulationFromRoute } from '@/lib/util'
 import { AssetIdMap } from '@/lib/AssetIdMap'
-import { assetIdMapKey, shellDescriptionsKey } from '@/lib/injectionKeys'
-import {
-  StarIcon as SolidStarIcon
-} from '@heroicons/vue/24/solid'
-import AnalysisWarnings from '@/components/AnalysisWarnings.vue'
-import CarbonTree from '../lib/model/CarbonTree'
+import { assetIdMapKey } from '@/lib/injectionKeys'
+import CarbonTree from '@/lib/model/CarbonTree'
 import BreadcrumbsBar from '@/components/BreadcrumbsBar.vue'
-import { debounce, sum } from 'lodash'
-import { LifeCyclePhases } from '../lib/lifeCycleUtil'
-import CarbonFootprint from '@/lib/model/CarbonFootprint'
+import LoadFailed from '@/components/layout/LoadFailed.vue'
+import { LifeCyclePhases } from '@/lib/lifeCycleUtil'
 import { storageRef } from '@/lib/storage'
-import ShellCard from '@/components/ShellCard.vue'
-import type { ShellDescriptionSmallInterface } from '@/lib/api/shellTypes'
 import { decodeBase64, encodeBase64 } from '@/lib/encoding'
+import { ErrorClient } from '@/lib/ErrorDataHandler'
+import { co2eqByLifeCyclePhases, sortPhases, type Carbon } from '@/lib/carbonValues'
 
-const warnings = ref<[string, string | undefined][]>([]);
 const route = useRoute();
-
-// Modal for adding more assets
-const showAssetModal = ref(false);
-const searchValue = ref("");
-const allDescriptions = inject<Ref<ShellDescriptionSmallInterface[]>>(shellDescriptionsKey)
-const hiddenShells = computed<boolean[] | undefined>(() => {
-  if (!searchValue.value) { return undefined; }
-  const s = searchValue.value.toLowerCase();
-  return allDescriptions?.value.map(
-    (d) =>
-      !d.id.toLowerCase().includes(s) &&
-      !d.name.toLowerCase().includes(s) &&
-      !d.globalAssetId.toLowerCase().includes(s) &&
-      !d.idShort?.toLowerCase().includes(s) &&
-      !d.description?.toLowerCase().includes(s)
-  )
-})
-const selectedShells = ref(new Set<string>(([] as string[]).concat(route.params.assets ?? []).map(decodeBase64)));
-
-function toggleSelectedShell(globalAssetId: string) {
-  if (selectedShells.value.has(globalAssetId)) {
-    selectedShells.value.delete(globalAssetId);
-  } else {
-    selectedShells.value.add(globalAssetId);
-  }
-}
-
-const favorites = storageRef<{ [globalAssetId: string]: boolean }>("selectedShellsById", {})
-const modalShells = computed(() => {
-  return allDescriptions?.value?.filter((_, i) => !hiddenShells.value?.[i]).sort((a, b) => {
-    console.log(a, favorites.value);
-    if (favorites.value?.[a.globalAssetId] === favorites.value?.[b.globalAssetId]) {
-      return 0;
-    }
-    if (favorites.value?.[a.globalAssetId]) {
-      return -1;
-    }
-    return 1;
-  });
-});
+const routeAssets = computed(() => ([] as string[]).concat(route.params.assets ?? []));
 
 // General shell information
 const idMap = inject<Ref<AssetIdMap>>(assetIdMapKey);
-type InfoWithFootprint = Awaited<ReturnType<typeof loadFullAssetInfo>> & { 'carbonFootprint': CarbonFootprint }
-const infos = computedAsync<InfoWithFootprint[]>(async () => {
+type Info = Awaited<ReturnType<typeof loadFullAssetInfo>>
+// Alle Assets anzeigen, auch ohne CO2-Daten. Kann ein einzelnes nicht geladen werden, erscheint es in der
+// Fehlerliste; nur wenn keines geladen werden kann, ersetzt ein Hinweis die Tabelle.
+const infos = computedAsync<Info[] | undefined>(async () => {
   if (!idMap?.value) {
-    return [];
+    return undefined;
   }
-  const { assets } = route.params;
-  const data = (Array.isArray(assets) ? assets : [ assets ]).map((a) => BackOnErrorHandler.bind(
-    loadFullAssetInfo(a, idMap.value, "url-", (...args) => warnings.value.push(args), simulationFromRoute(route)),
-    (e) => {
-      console.error(e);
-      if (e.status === 422) {
-        return ["The URL to the asset is invalid or does not point to a valid asset", "Check the link"]
-      }
-      return ["An error occurred while loading the asset", "Try another asset"];
-    }
+  const results = await Promise.allSettled(routeAssets.value.map((a) =>
+    loadFullAssetInfo(a, idMap.value, "url-", (title, details) => ErrorClient.warn(title, details), simulationFromRoute(route))
   ));
-  return (await Promise.all(data)).filter(i => (i.carbonTree || i.carbonFootprint) !== undefined) as InfoWithFootprint[];
-}, [])
-
-const hiddenAssets = computed(() => {
-  const assets = Array.isArray(route.params.assets) ? route.params.assets : [ route.params.assets ];
-  if (!infos.value) {
-    return [];
+  results.forEach((r, i) => {
+    if (r.status === 'rejected') {
+      ErrorClient.add({
+        message: r.reason?.status === 404 ? "An asset of the data sheet could not be found" : "An asset of the data sheet could not be loaded",
+        details: decodeBase64(routeAssets.value[i]),
+        status: typeof r.reason?.status === 'number' ? r.reason.status : undefined,
+      });
+    }
+  });
+  const loaded = results.filter((r): r is PromiseFulfilledResult<Info> => r.status === 'fulfilled').map((r) => r.value);
+  if (routeAssets.value.length && !loaded.length) {
+    await BackOnErrorHandler.bind(Promise.reject(new Error("No asset could be loaded")), "The assets of the data sheet could not be loaded");
   }
-  if (assets.length === infos.value.length) {
-    return [];
-  }
-  return assets.map(decodeBase64).filter(a => infos.value.every((i) => i.asset.assetInformation.globalAssetId !== a));
-})
+  return loaded;
+}, undefined)
 
-watch(() => hiddenAssets.value, (newValue) => {
-  if (newValue.length) {
-    warnings.value.unshift(["Asset not being displayed", `Following assets are not being displayed because they do not contain carbon footprint information: ${newValue.join(', ')}`])
-  }
-})
-
-const descriptions = computed(() => infos.value.map(i => i.description));
-const addresses = computed(() => infos.value.map(i => i.address));
-const carbon = computed<(CarbonTree | CarbonFootprint)[]>(() => (infos.value || []).map(i => i.carbonTree || i.carbonFootprint));
+const descriptions = computed(() => (infos.value || []).map(i => i.description));
+const addresses = computed(() => (infos.value || []).map(i => i.address));
+const carbon = computed<(Carbon | undefined)[]>(() => (infos.value || []).map(i => i.carbonTree ?? i.carbonFootprint));
 
 const carbonMultipliers = ref<number[]>([]);
 watch(() => carbon.value, (newValue) => {
   carbonMultipliers.value = Array(newValue.length).fill(1);
 })
+const multiplier = (i: number) => Math.max(0, Number(carbonMultipliers.value[i]) || 0);
 
-// Object which contains the CO2eq by life cycle phase
-function co2eqByLifeCyclePhases(
-  data: CarbonTree | CarbonFootprint,
-  customCount?: number,
-  includeBulkCount = false
-): { [lifeCyclePhases: string]: number} {
-  if (data instanceof CarbonFootprint) {
-    return Object.fromEntries(data.product.map((p) => [p.lifeCyclePhase.toString(), p.co2eq * (customCount || 1)]));
-  }
-  const count = includeBulkCount ? customCount || data.connection?.bulkCount || 1 : customCount || 1;
-  if (data.asset.footprint) {
-    return Object.fromEntries(data.asset.footprint.product.map((p) => [p.lifeCyclePhase.toString(), p.co2eq * count]));
-  }
-  const phases = data.connectionsArray.map((p) => co2eqByLifeCyclePhases(p, undefined, true));
-  const co2eqs = phases[0];
-  for (let i = 1; i < phases.length; i += 1) {
-    const p = phases[i];
-    for (const [k, v] of Object.entries(p)) {
-      co2eqs[k] = (co2eqs[k] || 0) + v * count;
-    }
-  }
-  return co2eqs;
-}
-
-
+const carbonRows = [['Total CO2eq', 'totalCo2eq'], ['Product CO2eq', 'productCo2eq'], ['Transport CO2eq', 'transportCo2eq']] as const;
 const carbonValues = computed(() => (
   carbon.value.map((c, i) => ({
-    'totalCo2eq': (c?.totalCo2eq || 0) * carbonMultipliers.value[i],
-    'productCo2eq': (c?.productCo2eq || 0) * carbonMultipliers.value[i],
-    'transportCo2eq': (c?.transportCo2eq || 0) * carbonMultipliers.value[i]
+    'totalCo2eq': (c?.totalCo2eq || 0) * multiplier(i),
+    'productCo2eq': (c?.productCo2eq || 0) * multiplier(i),
+    'transportCo2eq': (c?.transportCo2eq || 0) * multiplier(i)
   }))
 ));
 const carbonSums = computed(() => ({
@@ -156,387 +82,170 @@ const carbonMax = computed(() => ({
   'transportCo2eq': Math.max(...carbonValues.value.map(c => c.transportCo2eq)),
 }))
 
-const co2eqByPhases = computed(() => (
-  carbon.value.map((c, i) => co2eqByLifeCyclePhases(c, carbonMultipliers.value[i]))
-));
-const availableCo2eqPhases = computed(() => [...new Set(co2eqByPhases.value.map(Object.keys).flat())].sort());
+const co2eqByPhases = computed(() => carbon.value.map((c, i) => (c ? co2eqByLifeCyclePhases(c, multiplier(i)) : {} as Record<string, number>)));
+const availableCo2eqPhases = computed(() => sortPhases([...new Set(co2eqByPhases.value.map(Object.keys).flat())]));
 const co2eqPhaseSums = computed(() => Object.fromEntries(availableCo2eqPhases.value.map((p) => [p, sum(co2eqByPhases.value.map((c) => c[p] || 0))])))
 const co2eqPhaseMax = computed(() => Object.fromEntries(availableCo2eqPhases.value.map((p) => [p, Math.max(...co2eqByPhases.value.map((c) => c[p] || 0))])))
 
-const table = ref<HTMLTableElement>();
+/** Anteil am Zeilenmaximum für die Farbe der Zelle */
+function alpha(value: number | undefined, max: number) {
+  return max > 0 && value ? (value / max) * 0.25 : 0;
+}
 
+const metaRows = [
+  ['Description', 'description'],
+  ['ID', 'id'],
+  ['Global Asset ID', 'globalAssetId'],
+  ['ID Short', 'idShort'],
+  ['Asset Kind', 'assetKind'],
+] as const;
+
+function removeRoute(index: number) {
+  return { name: 'datasheet', params: { assets: routeAssets.value.filter((_, i) => i !== index) } };
+}
+
+// Kopieren eines Zellwerts per Klick
+const table = ref<HTMLTableElement>();
 const copyToastVisible = ref(false);
 let hideTimeout: number | undefined;
-function showCopyToast() {
-  clearTimeout(hideTimeout);
-  copyToastVisible.value = true;
-  hideTimeout = setTimeout(() => { copyToastVisible.value = false; }, 1000);
-}
-
 const copyValue = ref("");
 const copyExplanation = ref("");
-function copyContent(this: HTMLElement) {
-  copyValue.value = this.attributes.getNamedItem("data-copy")?.value || this.textContent || "";
-  copyExplanation.value = this.attributes.getNamedItem("data-copy-explanation")?.value || "";
-  navigator.clipboard.writeText(copyValue.value);
-  showCopyToast();
-}
-
-watch(() => table.value, (tableNew, tableOld) => {
-  if (tableOld) {
-    const oldCells = tableOld.getElementsByTagName('td');
-    for (const cell of oldCells) {
-      cell.removeEventListener('click', copyContent);
-    }
-  }
-  if (!tableNew) {
+function copyContent(event: MouseEvent) {
+  const cell = (event.target as HTMLElement).closest('td');
+  if (!cell || cell.classList.contains('no-copy')) {
     return;
   }
-  const cells = tableNew.getElementsByTagName('td');
-  for (const cell of cells) {
-    if (!cell.classList.contains('no-copy')) {
-      cell.addEventListener('click', copyContent);
-      cell.classList.add('cursor-copy')
-    }
-  }
-}, { immediate: true })
+  copyValue.value = cell.dataset.copy || cell.textContent?.trim() || "";
+  copyExplanation.value = cell.dataset.copyExplanation || "";
+  navigator.clipboard?.writeText(copyValue.value);
+  clearTimeout(hideTimeout);
+  copyToastVisible.value = true;
+  hideTimeout = window.setTimeout(() => { copyToastVisible.value = false; }, 1200);
+}
+onUnmounted(() => clearTimeout(hideTimeout));
 
 const pinCombined = storageRef("pinCombinedColumn", false);
-
-const nextToLastRight = ref(100);
-const nextToLastRightCss = computed(() => `${nextToLastRight.value}px`)
-
-const recalculateNextToLastRight = debounce(() => {
-  console.log("hallo", table.value?.querySelector('tr:first-child > *:nth-last-child(1)'))
-    nextToLastRight.value = table.value?.querySelector('tr:nth-child(2) > *:nth-last-child(1)')?.clientWidth || 0;
-  }, 250);
-
-watch(() => table.value, recalculateNextToLastRight)
-window.addEventListener('resize', recalculateNextToLastRight)
-
-onUnmounted(() => {
-  if (table.value) {
-    const oldCells = table.value.getElementsByTagName('td');
-    for (const cell of oldCells) {
-      cell.removeEventListener('click', copyContent);
-    }
-  }
-  window.removeEventListener('resize', recalculateNextToLastRight);
-})
-
-
-function addAssets() {
-  showAssetModal.value = true;
-}
 </script>
 
-<style>
-table.table-pin-next-to-last tr > *:nth-last-child(2) {
-  right: v-bind(nextToLastRightCss);
-}
-</style>
-
 <template>
-  <dialog class="modal" :class="{ 'modal-open': showAssetModal }">
-    <div class="modal-box max-w-screen-xl h-4/5 rounded-2xl shadow-lg bg-base-100 overflow-y-scroll pt-0">
-      <div class="flex flex-row gap-4 justify-center items-center sticky top-0 z-20 bg-base-100 py-2 pl-4 pr-8">
-        <span>Choose one or multiple assets</span>
-        <input class="input input-sm py-0 bg-secondary/10 grow" placeholder="Search" v-model="searchValue" />
-        <form method="dialog" @click="showAssetModal = false">
-          <button class="btn btn-sm btn-circle btn-ghost absolute right-2 top-2">✕</button>
-        </form>
-      </div>
-      <div class="grid grid-cols-4 gap-4 p-4 bg-white rounded-lg">
-        <em class="text-center col-span-4" v-if="hiddenShells && hiddenShells.every(x => x)">
-          No assets found<br />
-          <button @click="searchValue = ''" class="btn btn-secondary btn-sm">Clear Search</button>
-        </em>
-        <div
-          v-for="shell of modalShells"
-          :key="shell.globalAssetId"
-          class="relative bg-base-100 shadow-xl h-full cursor-pointer hover:scale-110 transition-all rounded-sm hover:z-10"
-          :class="{ 'outline outline-4 outline-primary': selectedShells.has(shell.globalAssetId) }"
-          @click="toggleSelectedShell(shell.globalAssetId);"
-        >
-          <span
-            v-if="favorites[shell.globalAssetId]"
-            class="transition-all rounded-lg p-1 top-1 left-1 absolute z-10 w-8 h-8 bg-yellow-400 text-base-100">
-            <SolidStarIcon />
-          </span>
-          <ShellCard
-            :key="shell.globalAssetId"
-            :shell="shell"
-            compact
-            show-co2
-          />
-        </div>
-      </div>
-      <div class="px-4 sticky bottom-0 z-20">
-        <router-link
-          v-if="selectedShells.size"
-          class="btn btn-primary btn-block"
-          :to="{ 'name': 'datasheet', params: { assets: [...selectedShells].map(encodeBase64) }}"
-        >
-          Compare {{ selectedShells.size }} Assets
-        </router-link>
-      </div>
-    </div>
-    <form method="dialog" class="modal-backdrop">
-      <button @click="showAssetModal = false;">close</button>
-    </form>
-  </dialog>
-  <div class="pl-20">
-    <div class="w-full relative h-screen overflow-x-auto overflow-y-auto">
-      <BreadcrumbsBar class="mt-1.5 sticky left-0" />
-      <AnalysisWarnings class="my-4 shadow-lg z-20 mr-4 rounded-xl sticky left-0" :warnings="warnings" />
-      <div class="toast z-10" v-show="copyToastVisible">
-        <div class="alert alert-info">
-          <span>Copied <code class="rounded-sm p-1 bg-black/5">{{ copyValue }}</code><span v-if="copyExplanation"> ({{ copyExplanation }})</span>.</span>
-        </div>
-      </div>
-      <div>
-        <table v-if="infos && infos.length > 0" class="table table-pin-cols table-pin-rows table-data" :class="{ 'table-pin-next-to-last': pinCombined }" ref="table">
-          <!--
-          <colgroup>
-            <col />
-            <col class="col-content" v-for="d of ds" :key="d.id" />
-            <col class="col-content" />
-          </colgroup>
-          -->
-          <thead>
-            <tr class="border-b-0">
-              <th class="pt-0 pb-0"></th>
-              <th class="pt-0 pb-0" v-for="d of descriptions" :key="d!.id">
-                <div class="join join-horizontal flex pt-1">
-                  <router-link :to="{ name: 'visualization.single', params: { asset: encodeBase64(d!.globalAssetId) } }" class="btn grow join-item btn-secondary/10 btn-xs" target="_blank">View Asset</router-link>
-                  <router-link
-                    v-if="descriptions.length > 1"
-                    :to="{ name: 'datasheet', params: { assets: descriptions.filter(other => other !== d).map(o => encodeBase64(o.globalAssetId)) }}"
-                    class="btn btn-error join-item btn-xs"
-                  >&times;</router-link>
-                </div>
-              </th>
-              <th></th>
-              <th></th>
-            </tr>
-            <tr class="bg-secondary" style="z-index: 100;">
-              <th class="pt-0 pb-0"></th>
-              <th v-for="(d, i) of descriptions" :key="d!.id" class="pt-0 pb-0">
-                <div class="flex items-center">
-                  <span class="grow">{{ d!.name }}</span>
-                  <div class="ml-2 input input-sm flex items-center gap-2 px-1">
-                    <button class="btn btn-xs btn-secondary" :disabled="carbonMultipliers[i] <= 0 ? true : undefined" @click="carbonMultipliers[i] = Math.max(0, carbonMultipliers[i]-1)">-</button>
-                    <input class="input input-xs w-10 hide-controls grow text-center" type="number" min="0" v-model="carbonMultipliers[i]" />
-                    <button class="btn btn-xs btn-secondary" @click="carbonMultipliers[i] += 1">+</button>
-                  </div>
-                </div>
-              </th>
-              <th class="relative w-4">
-                <button
-                  type="button"
-                  class="absolute inset-0 bg-base-200"
-                  @click="addAssets"
-                >+</button>
-              </th>
-              <th>
-                <div class="flex items-center">
-                  <em>Combined</em>
-                  <span class="tooltip tooltip-left font-normal" data-tip="Pin column">
-                    <input type="checkbox" class="checkbox checkbox-secondary checkbox-sm ml-2" v-model="pinCombined" />
-                  </span>
-                </div>
-              </th>
-              <th></th>
-            </tr>
-          </thead>
-          <tbody>
-            <tr>
-              <th>Name</th>
-              <td v-for="d of descriptions" :key="d.id">{{ d.name }}</td>
-              <td class="relative w-4 no-copy">
-                <button
-                  type="button"
-                  class="absolute inset-0 bg-base-200"
-                  @click="addAssets"
-                >+</button>
-              </td>
-              <td></td>
-              <th>Name</th>
-            </tr>
-            <tr>
-              <th>Description</th>
-              <td v-for="d of descriptions" :key="d.id">{{ d.description }}</td>
-              <td class="relative w-4 no-copy">
-                <button
-                  type="button"
-                  class="absolute inset-0 bg-base-200"
-                  @click="addAssets"
-                >+</button>
-              </td>
-              <td></td>
-              <th>Description</th>
-            </tr>
-            <tr>
-              <th>ID</th>
-              <td v-for="d of descriptions" :key="d.id">{{ d.id }}</td>
-              <td class="relative w-4 no-copy">
-                <button
-                  type="button"
-                  class="absolute inset-0 bg-base-200"
-                  @click="addAssets"
-                >+</button>
-              </td>
-              <td></td>
-              <th>ID</th>
-            </tr>
-            <tr>
-              <th>Global Asset ID</th>
-              <td v-for="d of descriptions" :key="d.id">{{ d.globalAssetId }}</td>
-              <td class="relative w-4 no-copy">
-                <button
-                  type="button"
-                  class="absolute inset-0 bg-base-200"
-                  @click="addAssets"
-                >+</button>
-              </td>
-              <td></td>
-              <th>Global Asset ID</th>
-            </tr>
-            <tr>
-              <th>ID Short</th>
-              <td v-for="d of descriptions" :key="d.id">{{ d.idShort }}</td>
-              <td class="relative w-4 no-copy">
-                <button
-                  type="button"
-                  class="absolute inset-0 bg-base-200"
-                  @click="addAssets"
-                >+</button>
-              </td>
-              <td></td>
-              <th>ID Short</th>
-            </tr>
-            <tr>
-              <th>Asset Kind</th>
-              <td v-for="d of descriptions" :key="d.id">{{ d.assetKind }}</td>
-              <td class="relative w-4 no-copy">
-                <button
-                  type="button"
-                  class="absolute inset-0 bg-base-200"
-                  @click="addAssets"
-                >+</button>
-              </td>
-              <td></td>
-              <th>Asset Kind</th>
-            </tr>
-            <tr>
-              <th>Address</th>
-              <td v-for="(a, i) of addresses" :key="i">{{ a }}</td>
-              <td class="relative w-4 no-copy">
-                <button
-                  type="button"
-                  class="absolute inset-0 bg-base-200"
-                  @click="addAssets"
-                >+</button>
-              </td>
-              <td></td>
-              <th>Address</th>
-            </tr>
-            <tr
-              class="hover-with-before group"
-              v-for="[name, key] of ([['Total CO2eq', 'totalCo2eq'], ['Product CO2eq', 'productCo2eq'], ['Transport CO2eq', 'transportCo2eq']] as const)"
-              :key="key"
+  <div class="px-4 py-1">
+    <BreadcrumbsBar />
+  </div>
+  <LoadFailed v-if="currentLoadError" :message="currentLoadError" />
+  <div v-else class="px-4 pb-16">
+    <div v-if="infos === undefined" class="skeleton h-96 w-full"></div>
+    <p v-else-if="infos.length === 0" class="py-8 text-center">No assets selected.</p>
+    <div v-else class="overflow-auto overscroll-x-contain max-h-[calc(100vh-7rem)] border border-base-300 rounded-sm">
+      <table class="table table-sm table-pin-rows table-pin-cols table-data" ref="table" @click="copyContent">
+        <thead>
+          <tr class="bg-base-200">
+            <th class="bg-base-200 align-bottom">
+              <label class="flex items-center gap-2 font-normal text-xs cursor-pointer">
+                <input type="checkbox" class="checkbox checkbox-xs" v-model="pinCombined" />
+                Show combined first
+              </label>
+            </th>
+            <td v-if="pinCombined && descriptions.length > 1" class="bg-base-200 align-top font-semibold">Combined</td>
+            <td v-for="(d, i) of descriptions" :key="d!.id" class="bg-base-200 align-top no-copy">
+              <div class="flex items-start gap-1">
+                <router-link
+                  :to="{ name: 'visualization.single', params: { asset: encodeBase64(d!.globalAssetId) } }"
+                  class="font-semibold grow min-w-0 flex items-center gap-1 hover:underline"
+                  :title="`${d!.name} (open asset)`"
+                ><span class="truncate">{{ d!.name }}</span><ArrowTopRightOnSquareIcon class="shrink-0 h-3 opacity-60" /></router-link>
+                <router-link
+                  v-if="descriptions.length > 1"
+                  :to="removeRoute(i)"
+                  class="shrink-0 opacity-50 hover:opacity-100"
+                  title="Remove from this data sheet"
+                ><XMarkIcon class="h-4" /></router-link>
+              </div>
+              <label class="flex items-center gap-1 mt-1 font-normal text-xs" title="Number of units the values are multiplied with">
+                Units
+                <input class="input input-xs w-16 text-center" type="number" min="0" v-model.number="carbonMultipliers[i]" />
+              </label>
+            </td>
+            <td v-if="!pinCombined && descriptions.length > 1" class="bg-base-200 align-top font-semibold">Combined</td>
+          </tr>
+        </thead>
+        <tbody>
+          <tr v-for="[name, key] of metaRows" :key="key">
+            <th>{{ name }}</th>
+            <td v-if="pinCombined && descriptions.length > 1" class="no-copy"></td>
+            <td v-for="d of descriptions" :key="d.id">{{ d[key] }}</td>
+            <td v-if="!pinCombined && descriptions.length > 1" class="no-copy"></td>
+          </tr>
+          <tr>
+            <th>Address</th>
+            <td v-if="pinCombined && descriptions.length > 1" class="no-copy"></td>
+            <td v-for="(a, i) of addresses" :key="i">{{ a && String(a) !== 'undefined' ? a : '' }}</td>
+            <td v-if="!pinCombined && descriptions.length > 1" class="no-copy"></td>
+          </tr>
+          <tr class="hover-with-before" v-for="[name, key] of carbonRows" :key="key">
+            <th>{{ name }}</th>
+            <td
+              v-if="pinCombined && descriptions.length > 1"
+              class="font-semibold"
+              :data-copy="convertGrams(carbonSums[key], 'kg', 'g')"
+              data-copy-explanation="CO2eq in g"
+            >{{ grams(carbonSums[key], "kg") }}</td>
+            <td
+              v-for="(c, i) of carbon"
+              :key="i"
+              :data-copy="convertGrams(carbonValues[i][key], 'kg', 'g')"
+              data-copy-explanation="CO2eq in g"
+              :class="{ 'no-copy opacity-50 italic': !c }"
+              :style="`--bg-alpha: ${alpha(carbonValues[i][key], carbonMax[key])};`"
             >
-              <th class="z-10">{{ name }}</th>
-              <td
-                v-for="(c, i) of carbon"
-                :key="i"
-                class="bg-base-100 group-hover:bg-base-100"
-                :data-copy="convertGrams(carbonValues[i][key], 'kg', 'g')"
-                data-copy-explanation="CO2eq in g"
-                :style="`--bg-alpha: ${(carbonValues[i][key] / carbonMax[key]) * .25};`"
-              >
-                {{ grams(carbonValues[i][key], "kg") }}
-                <small v-if="carbonMultipliers[i] !== 1" class="float-right">
-                  (for {{ carbonMultipliers[i] }} units)
-                </small>
-              </td>
-              <td class="relative w-4 no-copy">
-                <button
-                  type="button"
-                  class="absolute inset-0 bg-base-200"
-                  @click="addAssets"
-                >+</button>
-              </td>
-              <td
-                :data-copy="convertGrams(carbonSums[key], 'kg', 'g')"
-                data-copy-explanation="CO2eq in g"
-              >{{ grams(carbonSums[key], "kg") }}</td>
-              <th>{{ name }}</th>
-            </tr>
-            <tr>
-              <th>Covered Life Cycle Phases</th>
-              <td v-for="(c, i) of carbon" :key="i">{{ or(c?.coveredLifeCyclePhases, () => (c instanceof CarbonTree ? `${c.byChildrenCoveredLifeCyclePhases} (from its components)` : undefined)) }}</td>
-              <td class="relative w-4 no-copy">
-                <button
-                  type="button"
-                  class="absolute inset-0 bg-base-200"
-                  @click="addAssets"
-                >+</button>
-              </td>
-              <td>{{ LifeCyclePhases.merged(...carbon.map(c => c?.coveredLifeCyclePhases).filter(x => x !== undefined) as LifeCyclePhases[]) }}</td>
-              <th>Covered Life Cycle Phases</th>
-            </tr>
-            <tr v-for="phase of availableCo2eqPhases" :key="phase" class="hover-with-before group">
-              <th class="z-10">{{ phase }}</th>
-              <td
-                v-for="(c, i) of co2eqByPhases"
-                :key="i"
-                class="bg-base-100 group-hover:bg-base-100"
-                :data-copy="c[phase] ? convertGrams(c[phase], 'kg', 'g') : ''"
-                data-copy-explanation="CO2eq in g"
-                :style="`--bg-alpha: ${(c[phase] / co2eqPhaseMax[phase]) * .25};`"
-              >
-                {{ c[phase] ? grams(c[phase], "kg") : '' }}
-                <small v-if="c[phase] && carbonMultipliers[i] !== 1" class="float-right">
-                  (for {{ carbonMultipliers[i] }} items)
-                </small>
-              </td>
-              <td class="relative w-4 no-copy">
-                <button
-                  type="button"
-                  class="absolute inset-0 bg-base-200"
-                  @click="addAssets"
-                >+</button>
-              </td>
-              <td
-                :data-copy="convertGrams(co2eqPhaseSums[phase], 'kg', 'g')"
-                class="bg-base-100 group-hover:bg-base-100"
-                data-copy-explanation="CO2eq in g"
-              >{{ grams(co2eqPhaseSums[phase], "kg") }}</td>
-              <th>{{ phase }}</th>
-            </tr>
-          </tbody>
-          <tfoot>
-            <tr>
-              <th></th>
-              <th v-for="d of descriptions" :key="d.id">{{ d.name }}</th>
-              <th class="relative w-4 no-copy">
-                <button
-                  type="button"
-                  class="absolute inset-0 bg-base-200"
-                  @click="addAssets"
-                >+</button>
-              </th>
-              <th><em>Combined</em></th>
-              <th></th>
-            </tr>
-          </tfoot>
-        </table>
-      </div>
-      <div class="sticky left-0 hidden">
-        <pre>{{ co2eqByPhases }}</pre>
-        <pre v-for="info of infos" :key="info.asset.id">{{ info.description }}</pre>
-      </div>
+              {{ c ? grams(carbonValues[i][key], "kg") : 'no data' }}
+            </td>
+            <td
+              v-if="!pinCombined && descriptions.length > 1"
+              class="font-semibold"
+              :data-copy="convertGrams(carbonSums[key], 'kg', 'g')"
+              data-copy-explanation="CO2eq in g"
+            >{{ grams(carbonSums[key], "kg") }}</td>
+          </tr>
+          <tr>
+            <th>Covered Life Cycle Phases</th>
+            <td v-if="pinCombined && descriptions.length > 1">{{ LifeCyclePhases.merged(...carbon.map(c => c?.coveredLifeCyclePhases).filter(x => x !== undefined) as LifeCyclePhases[]) }}</td>
+            <td v-for="(c, i) of carbon" :key="i" :class="{ 'no-copy opacity-50 italic': !c }">{{ c ? or(c.coveredLifeCyclePhases, () => (c instanceof CarbonTree ? `${c.byChildrenCoveredLifeCyclePhases} (from its components)` : undefined)) : 'no carbon footprint data' }}</td>
+            <td v-if="!pinCombined && descriptions.length > 1">{{ LifeCyclePhases.merged(...carbon.map(c => c?.coveredLifeCyclePhases).filter(x => x !== undefined) as LifeCyclePhases[]) }}</td>
+          </tr>
+          <tr v-for="phase of availableCo2eqPhases" :key="phase" class="hover-with-before">
+            <th>{{ phase }}</th>
+            <td
+              v-if="pinCombined && descriptions.length > 1"
+              class="font-semibold"
+              :data-copy="convertGrams(co2eqPhaseSums[phase], 'kg', 'g')"
+              data-copy-explanation="CO2eq in g"
+            >{{ grams(co2eqPhaseSums[phase], "kg") }}</td>
+            <td
+              v-for="(c, i) of co2eqByPhases"
+              :key="i"
+              :data-copy="c[phase] ? convertGrams(c[phase], 'kg', 'g') : ''"
+              data-copy-explanation="CO2eq in g"
+              :style="`--bg-alpha: ${alpha(c[phase], co2eqPhaseMax[phase])};`"
+            >
+              {{ c[phase] ? grams(c[phase], "kg") : '' }}
+            </td>
+            <td
+              v-if="!pinCombined && descriptions.length > 1"
+              class="font-semibold"
+              :data-copy="convertGrams(co2eqPhaseSums[phase], 'kg', 'g')"
+              data-copy-explanation="CO2eq in g"
+            >{{ grams(co2eqPhaseSums[phase], "kg") }}</td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+    <p v-if="infos && infos.length" class="text-xs opacity-60 mt-2">
+      Click a cell to copy its value. Values are multiplied with the units of each asset.
+    </p>
+  </div>
+  <div class="toast toast-start z-50" v-show="copyToastVisible">
+    <div class="alert alert-info py-2">
+      <span>Copied <code>{{ copyValue }}</code><span v-if="copyExplanation"> ({{ copyExplanation }})</span></span>
     </div>
   </div>
 </template>
