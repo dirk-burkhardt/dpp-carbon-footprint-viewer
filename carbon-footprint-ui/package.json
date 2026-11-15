@@ -1,0 +1,71 @@
+{
+  "name": "carbon-footprint-ui",
+  "version": "1.0.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "dev": "vite",
+    "build": "npm run check-version && run-p type-check \"build-only {@}\" --",
+    "preview": "vite preview",
+    "build-only": "vite build",
+    "type-check": "vue-tsc --build --force",
+    "lint": "eslint . --fix",
+    "format": "prettier --write src/",
+    "generate": "npx --yes openapi-typescript@7 ./src/assets/api/AssetAdministrationShellRegistrySwagger.json -o ./src/lib/api/AssetAdministrationShellRegistry.d.ts && npx --yes openapi-typescript@7 ./src/assets/api/AssetAdministrationShellRepositorySwagger.json -o ./src/lib/api/AssetAdministrationShellRepository.d.ts && npx --yes openapi-typescript@7 ./src/assets/api/SubmodelRepositorySwagger.json -o ./src/lib/api/SubmodelRepository.d.ts && npx --yes openapi-typescript@7 ./src/assets/api/AssetAdditionalsSwagger.json -o ./src/lib/api/AssetAdditionals.d.ts",
+    "check-version": "node scripts/check-version.mjs"
+  },
+  "dependencies": {
+    "@heroicons/vue": "^2.2.0",
+    "@observablehq/plot": "^0.6.19",
+    "@vueuse/core": "^15.0.0",
+    "colorjs.io": "^0.7.1",
+    "d3": "^7.9.2",
+    "d3-sankey": "^0.12.3",
+    "leaflet": "^1.9.4",
+    "lodash": "^4.18.1",
+    "luxon": "^3.7.2",
+    "lz-string": "^1.5.0",
+    "openapi-fetch": "^0.17.0",
+    "uuid": "^14.0.3",
+    "vue": "^3.5.45",
+    "vue-router": "^5.5.1"
+  },
+  "devDependencies": {
+    "@tailwindcss/typography": "^0.5.20",
+    "@tailwindcss/vite": "^4.3.5",
+    "@tsconfig/node24": "^24.0.6",
+    "@types/d3": "^7.4.3",
+    "@types/d3-sankey": "^0.12.5",
+    "@types/leaflet": "^1.9.22",
+    "@types/lodash": "^4.17.27",
+    "@types/luxon": "^3.7.6",
+    "@types/node": "^24.0.0",
+    "@vitejs/plugin-vue": "^6.0.11",
+    "@vue/eslint-config-prettier": "^10.2.0",
+    "@vue/eslint-config-typescript": "^14.9.0",
+    "@vue/tsconfig": "^0.9.1",
+    "daisyui": "^5.8.0",
+    "eslint": "^10.15.0",
+    "eslint-plugin-vue": "^10.12.1",
+    "jiti": "^2.7.0",
+    "npm-run-all2": "^9.0.4",
+    "prettier": "^3.10.1",
+    "sass": "^1.108.2",
+    "tailwindcss": "^4.3.5",
+    "typescript": "~6.0.3",
+    "vite": "^8.3.8",
+    "vue-tsc": "^3.3.14"
+  },
+  "license": "Apache-2.0",
+  "engines": {
+    "node": "^20.19.0 || >=22.12.0"
+  },
+  "overrides": {
+    "@typescript-eslint/typescript-estree": {
+      "minimatch": "^11.0.8"
+    },
+    "@tailwindcss/typography": {
+      "postcss-selector-parser": "^6.1.5"
+    }
+  }
+}
