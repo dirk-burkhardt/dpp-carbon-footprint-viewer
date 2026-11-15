@@ -85,6 +85,7 @@ Apache License 2.0, siehe [LICENSE](LICENSE).
 
 ### 2026-11-15
 
+- UI 1.2.5: Logo in der Kopfzeile mit dem Schriftzug „DPPviewer“ statt „CLiCE - DiPP“ (Datei src/assets/DPPviewer-logo.svg, Schrift Quicksand als Pfad)
 - UI 1.2.4: Favicon und App-Symbole zeigen das CLiCE-DiPP-Logo (Lupe mit Blatt-Etikett)
 - UI 1.2.4: Datasheet: lange Asset-Namen in der Kopfzeile werden gekürzt, der volle Name erscheint beim Überfahren
 - UI 1.2.3: Datasheet scrollt bei vielen Assets waagerecht, die linke Spalte mit den Bezeichnungen bleibt dabei stehen

@@ -50,8 +50,8 @@ services:
     build:
       context: ./carbon-footprint-ui
       args:
-        VERSION: "1.2.4"
-    image: dppviewer-ui:1.2.4
+        VERSION: "1.2.5"
+    image: dppviewer-ui:1.2.5
     depends_on:
       api:
         condition: service_healthy

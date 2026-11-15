@@ -5,7 +5,7 @@
 import { inject, ref, type Ref } from 'vue'
 import { useRouter } from 'vue-router'
 import { InformationCircleIcon, MagnifyingGlassIcon, MoonIcon, SunIcon, XMarkIcon } from '@heroicons/vue/24/outline'
-import LogoSVG from '@/assets/CLiCE-DiPP.svg'
+import LogoSVG from '@/assets/DPPviewer-logo.svg'
 import { darkModeKey } from '@/lib/injectionKeys'
 import { deepSearch, deepSearchLoading, searchText } from '@/lib/search'
 import AboutContent from '@/components/AboutContent.vue'
@@ -27,7 +27,7 @@ function onSearchInput() {
     <router-link to="/" title="Asset selection" class="shrink-0">
       <img
         :src="LogoSVG"
-        alt="CLiCE-DiPP logo"
+        alt="DPPviewer logo"
         class="h-10"
         :class="{ 'bg-white/90 rounded-sm p-0.5': useDarkTheme }"
       />

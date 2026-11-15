@@ -78,6 +78,10 @@ Laufzeitkonfiguration über `run.sh` aus den Umgebungsvariablen `ASSET_ADMINISTR
 
 ## Changelog
 
+### 1.2.5 – 2026-11-15
+
+- Logo in der Kopfzeile mit dem Schriftzug „DPPviewer“ statt „CLiCE - DiPP“ (Datei src/assets/DPPviewer-logo.svg, Schrift Quicksand als Pfad)
+
 ### 1.2.4 – 2026-11-15
 
 - Favicon und App-Symbole zeigen das CLiCE-DiPP-Logo (Lupe mit Blatt-Etikett)
