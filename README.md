@@ -4,6 +4,8 @@ Visuelle Analyse von Carbon Footprints aus Digitalen Produktpässen (Asset Admin
 Hervorgegangen aus der Masterarbeit „Visual Analytics on Digital Product Passports to Optimize Production Chains“
 im Forschungsprojekt CLiCE-DiPP, weitergeführt vom VIS-Team der Hochschule Darmstadt.
 
+A public version is running at: https://dppviewer.policymodelling.com
+
 ## Bestandteile
 
 | Ordner | Inhalt |
