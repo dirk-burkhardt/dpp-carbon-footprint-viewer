@@ -16,4 +16,14 @@ if (first !== version) {
   console.error('Version mit "python tools/bump_version.py ui <major|minor|patch> <Beschreibung>" erhöhen.')
   process.exit(1)
 }
+// docker-compose.yml im Projektordner (falls vorhanden) muss dieselbe Version verwenden
+try {
+  const compose = readFileSync(new URL('../../docker-compose.yml', import.meta.url), 'utf-8')
+  if (!compose.includes(`image: dppviewer-ui:${version}`)) {
+    console.error(`docker-compose.yml verwendet nicht dppviewer-ui:${version} (tools/bump_version.py verwenden)`)
+    process.exit(1)
+  }
+} catch (error) {
+  if (error.code !== 'ENOENT') throw error
+}
 console.log(`Version ${version} ok`)

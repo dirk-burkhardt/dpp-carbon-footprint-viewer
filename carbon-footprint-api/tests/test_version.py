@@ -22,3 +22,13 @@ def test_changelog_starts_with_current_version():
 
 def test_api_prefix_matches_major_version():
     assert f"/api/v{__version__.split('.')[0]}" == API_PREFIX
+
+
+def test_compose_uses_current_version():
+    compose = Path(__file__).parent.parent.parent / "docker-compose.yml"
+    if not compose.exists():
+        return
+    text = compose.read_text(encoding="utf-8")
+    assert f"image: dppviewer-api:{__version__}" in text, "docker-compose.yml: tools/bump_version.py verwenden"
+    api_block = text.split("\n  api:\n", 1)[1].split("\n  ui:\n", 1)[0]
+    assert f'VERSION: "{__version__}"' in api_block

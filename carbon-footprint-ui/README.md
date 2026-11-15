@@ -78,6 +78,10 @@ Laufzeitkonfiguration über `run.sh` aus den Umgebungsvariablen `ASSET_ADMINISTR
 
 ## Changelog
 
+### 1.1.0 – 2026-11-15
+
+- Betrieb als Docker-Container mit nginx: Weiterleitung von /api an die API, Laufzeitkonfiguration und Content-Security-Policy aus Umgebungsvariablen, Sicherheits-Header, Caching, Begrenzung der Downloads über URLs; Adresssuche mit GEOCODING_URL=off abschaltbar
+
 ### 1.0.0 – 2026-11-15
 
 - Umbenannt von `carbon-trace` in `carbon-footprint-ui`, Logo oben links ist jetzt das CLiCE-DiPP-Logo

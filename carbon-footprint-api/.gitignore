@@ -2,6 +2,6 @@ __pycache__/
 *.egg-info/
 .venv/
 .pytest_cache/
-tests/golden/java/
+snapshots/
 .ruff_cache/
 .mypy_cache/

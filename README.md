@@ -37,9 +37,16 @@ Die Oberfläche läuft dann unter http://localhost:5173 und leitet `/api` an die
 
 ## Versionierung
 
-API und Oberfläche haben eigene Versionen nach [Semantic Versioning](https://semver.org/lang/de/):
-`MAJOR` bei inkompatiblen Änderungen, `MINOR` bei neuen Funktionen, `PATCH` bei Fehlerbehebungen. Jede Änderung
-erhöht die Version des betroffenen Teils:
+API und Oberfläche haben eigene Versionen nach [Semantic Versioning](https://semver.org/lang/de/). Jede Änderung
+erhöht die Version des betroffenen Teils, die Stufe richtet sich nach der schwersten Änderung:
+
+| Stufe | API | Oberfläche |
+|---|---|---|
+| `MAJOR` | Inkompatible Änderung an Endpunkten, Antwortformat, Optionen oder Umgebungsvariablen (neues Präfix `/api/vN`) | Benötigt eine neue Hauptversion der API, entfernte Ansichten oder Funktionen, Links oder gespeicherte Einstellungen werden ungültig |
+| `MINOR` | Neue Endpunkte, Optionen oder Funktionen, abwärtskompatibel; neue Betriebsart (z. B. Container) | Neue Ansichten, Funktionen oder Einstellungen; sichtbare Gestaltungsänderungen |
+| `PATCH` | Fehlerbehebungen, Sicherheitskorrekturen ohne Schnittstellenänderung, Aktualisierung von Abhängigkeiten, interne Umbauten | Fehlerbehebungen, Sicherheitskorrekturen, Aktualisierung von Abhängigkeiten, interne Umbauten |
+
+Reine Dokumentationsänderungen erhöhen keine Version. Erhöht wird mit:
 
 ```bash
 python tools/bump_version.py api patch "Kurze Beschreibung der Änderung"
@@ -61,6 +68,8 @@ Apache License 2.0, siehe [LICENSE](LICENSE).
 
 ### 2026-11-15
 
+- UI 1.1.0: Betrieb als Docker-Container mit nginx: Weiterleitung von /api an die API, Laufzeitkonfiguration und Content-Security-Policy aus Umgebungsvariablen, Sicherheits-Header, Caching, Begrenzung der Downloads über URLs; Adresssuche mit GEOCODING_URL=off abschaltbar
+- API 4.1.0: Betrieb als Docker-Container (python:3.13-slim, ohne Root-Rechte, schreibgeschütztes Dateisystem, Healthcheck über /api/health) mit docker-compose.yml; AASX-Dateien aus repo werden nach /opt/repo eingebunden
 - API 4.0.0: Neuimplementierung in Python (FastAPI) mit Präfix `/api/v4`, Konfiguration über Umgebungsvariablen,
   Sicherheitsüberarbeitung
 - UI 1.0.0: umbenannt in `carbon-footprint-ui`, Leaflet/OpenStreetMap statt Mapbox, CLiCE-DiPP-Logo, aktuelle

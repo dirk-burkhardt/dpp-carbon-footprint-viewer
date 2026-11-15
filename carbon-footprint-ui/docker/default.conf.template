@@ -1,0 +1,67 @@
+# Vorlage, Platzhalter @...@ werden beim Start von 40-dppviewer-config.sh ersetzt.
+
+# Höchstens 10 Downloads externer Dateien pro Minute und Client (die API lädt dafür fremde URLs)
+limit_req_zone $binary_remote_addr zone=external_shells:10m rate=10r/m;
+limit_req_status 429;
+
+map $host $dppviewer_csp {
+    default "@CSP@";
+}
+
+server {
+    listen 8080;
+    server_name _;
+    root /usr/share/nginx/html;
+
+    # Docker-DNS: der API-Container wird bei Neustarts neu aufgelöst
+    resolver @DNS_RESOLVER@ valid=10s ipv6=off;
+    set $api_upstream http://@API_UPSTREAM@;
+
+    location = /healthz {
+        access_log off;
+        default_type text/plain;
+        return 200 "ok\n";
+    }
+
+    # API: Anfrage unverändert weiterreichen (auch codierte Zeichen wie %2F)
+    location /api/ {
+        proxy_pass $api_upstream;
+        proxy_http_version 1.1;
+        proxy_set_header Host $host;
+        proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+        proxy_set_header X-Forwarded-Proto $scheme;
+        proxy_set_header X-Forwarded-Host $host;
+        proxy_read_timeout 120s;
+    }
+
+    location ~ ^/api/v[0-9]+/external-shells/ {
+        limit_req zone=external_shells burst=5 nodelay;
+        proxy_pass $api_upstream;
+        proxy_http_version 1.1;
+        proxy_set_header Host $host;
+        proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+        proxy_set_header X-Forwarded-Proto $scheme;
+        proxy_read_timeout 120s;
+    }
+
+    # Laufzeitkonfiguration (aus Umgebungsvariablen erzeugt)
+    location = /config.json {
+        include /etc/nginx/dppviewer/security-headers.conf;
+        add_header Cache-Control "no-store" always;
+        alias /tmp/runtime/config.json;
+    }
+
+    # Gebaute Dateien mit Hash im Namen: lange cachen
+    location /assets/ {
+        include /etc/nginx/dppviewer/security-headers.conf;
+        add_header Cache-Control "public, max-age=31536000, immutable" always;
+        try_files $uri =404;
+    }
+
+    # Single-Page-App: unbekannte Pfade liefern index.html
+    location / {
+        include /etc/nginx/dppviewer/security-headers.conf;
+        add_header Cache-Control "no-cache" always;
+        try_files $uri $uri/ /index.html;
+    }
+}

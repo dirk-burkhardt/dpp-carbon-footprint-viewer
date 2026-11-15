@@ -1,0 +1,7 @@
+# Nur pyproject.toml, README.md und src werden für das Image benötigt
+**
+!pyproject.toml
+!README.md
+!src/
+**/__pycache__
+**/*.egg-info

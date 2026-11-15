@@ -1,0 +1,73 @@
+# DPPviewer: API und Oberfläche als getrennte Container.
+#
+#   docker compose up -d --build     bauen und starten, danach http://localhost:5001
+#   docker compose logs -f           Protokolle verfolgen
+#   docker compose restart api       nach Änderungen im Ordner repo (Dateien werden beim Start geladen)
+#   docker compose down              beenden
+#
+# Einstellungen (Port, Karten- und Geocoding-Dienste) in einer Datei .env neben dieser Datei, siehe .env.example.
+# Die Image-Versionen werden von tools/bump_version.py gepflegt.
+
+name: dppviewer
+
+x-hardening: &hardening
+  restart: unless-stopped
+  read_only: true
+  tmpfs:
+    - /tmp
+  cap_drop:
+    - ALL
+  security_opt:
+    - no-new-privileges:true
+
+services:
+  api:
+    <<: *hardening
+    build:
+      context: ./carbon-footprint-api
+      args:
+        VERSION: "4.1.0"
+    image: dppviewer-api:4.1.0
+    environment:
+      CFA_AASX: /opt/repo/*.aasx
+      CFA_LOG_LEVEL: ${API_LOG_LEVEL:-INFO}
+      CFA_DOCS_ENABLED: ${API_DOCS_ENABLED:-true}
+      CFA_EXTERNAL_SHELLS_ENABLED: ${API_EXTERNAL_SHELLS_ENABLED:-true}
+      # Die API ist nur über den UI-Container erreichbar, dessen Weiterleitungs-Header gelten
+      CFA_FORWARDED_ALLOW_IPS: "*"
+    volumes:
+      - ./repo:/opt/repo:ro
+    networks:
+      - backend
+    # Kein Port nach außen: Zugriff nur über die Oberfläche (/api), Swagger unter /api/docs
+    deploy:
+      resources:
+        limits:
+          memory: 2g
+
+  ui:
+    <<: *hardening
+    build:
+      context: ./carbon-footprint-ui
+      args:
+        VERSION: "1.1.0"
+    image: dppviewer-ui:1.1.0
+    depends_on:
+      api:
+        condition: service_healthy
+    ports:
+      - "${UI_PORT:-5001}:8080"
+    environment:
+      API_UPSTREAM: api:8080
+      MAP_TILE_URL: ${MAP_TILE_URL:-}
+      MAP_ATTRIBUTION: ${MAP_ATTRIBUTION:-}
+      GEOCODING_URL: ${GEOCODING_URL:-}
+    networks:
+      - backend
+    deploy:
+      resources:
+        limits:
+          memory: 256m
+
+networks:
+  backend: {}

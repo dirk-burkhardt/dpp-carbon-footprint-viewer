@@ -126,6 +126,10 @@ passt.
 
 ## Changelog
 
+### 4.1.0 – 2026-11-15
+
+- Betrieb als Docker-Container (python:3.13-slim, ohne Root-Rechte, schreibgeschütztes Dateisystem, Healthcheck über /api/health) mit docker-compose.yml; AASX-Dateien aus repo werden nach /opt/repo eingebunden
+
 ### 4.0.0 – 2026-11-15
 
 - Neu implementiert in Python mit FastAPI als Ersatz der bisherigen Java-/Spring-Boot-Umsetzung; Antwortformat

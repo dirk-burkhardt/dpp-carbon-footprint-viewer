@@ -13,7 +13,8 @@ export type AppConfig = {
   assetAdministrationShellAdditionalsUrl: string
   // /submodels/{submodelIdentifier} statt /shells/{aasIdentifier}/submodels/{submodelIdentifier}
   preferSubmodelRepository: boolean
-  // Karte (Leaflet) und Geocoding (Nominatim-kompatibel); leere geocodingUrl schaltet Geocoding ab
+  // Karte (Leaflet) und Geocoding (Nominatim-kompatibel); leere geocodingUrl (in config.json: "off") schaltet
+  // das Geocoding ab
   mapTileUrl: string
   mapAttribution: string
   geocodingUrl: string
@@ -31,7 +32,8 @@ const apiConfig: AppConfig = {
   mapAttribution:
     env.VITE_MAP_ATTRIBUTION ||
     '&copy; <a href="https://www.openstreetmap.org/copyright" target="_blank" rel="noopener noreferrer">OpenStreetMap</a>',
-  geocodingUrl: env.VITE_GEOCODING_URL ?? 'https://nominatim.openstreetmap.org'
+  geocodingUrl:
+    env.VITE_GEOCODING_URL === 'off' ? '' : (env.VITE_GEOCODING_URL ?? 'https://nominatim.openstreetmap.org')
 }
 
 const booleanKeys: (keyof AppConfig)[] = ['preferSubmodelRepository']
@@ -42,7 +44,9 @@ export function update(newConfig: Record<string, unknown>) {
     if (value === undefined || value === null || value === '') {
       continue
     }
-    if (booleanKeys.includes(key)) {
+    if (key === 'geocodingUrl' && value === 'off') {
+      apiConfig.geocodingUrl = ''
+    } else if (booleanKeys.includes(key)) {
       ;(apiConfig as Record<string, unknown>)[key] = value === true || value === '1' || value === 'true'
     } else if (typeof value === 'string') {
       ;(apiConfig as Record<string, unknown>)[key] = value
