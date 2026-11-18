@@ -2,7 +2,7 @@
 /**
  * Repository Overview and Asset Selection
  */
-import { computed, inject, onMounted, type Ref, ref } from 'vue'
+import { computed, inject, onMounted, type Ref, ref, watch } from 'vue'
 import { externalShellsKey, shellDescriptionsKey } from '@/lib/injectionKeys'
 import type { ShellDescriptionSmallInterface } from '@/lib/api/shellTypes'
 import { GlobeEuropeAfricaIcon, CheckCircleIcon, ExclamationCircleIcon, ArrowUpTrayIcon } from '@heroicons/vue/24/outline'
@@ -25,6 +25,7 @@ import {
   UploadRequestError,
 } from '@/lib/api/uploads'
 import { addExternalSource, removeExternalSource } from '@/lib/externalSources'
+import { lastAssetTab } from '@/lib/assetSelectionState'
 import AssetGridCard from '@/components/AssetGridCard.vue'
 import FavoritesBox from '@/components/FavoritesBox.vue'
 import StatusIndicator from '@/components/layout/StatusIndicator.vue'
@@ -38,6 +39,8 @@ const updateQuery = createUpdateQuery(router);
 // Whether to show the external window
 const showExternal = computed(() => clients.hasAssetAdditionals && router.currentRoute.value.query.assets === "external");
 const externalUrl = ref("");
+// Links back to the asset selection (breadcrumbs) open the same tab again
+watch(showExternal, (external) => { lastAssetTab.value = external ? 'external' : 'preloaded' }, { immediate: true });
 
 const externalShells = inject<Ref<{ [url: string]: null | string | components["schemas"]["AssetAdministrationShell"][] }>>(externalShellsKey);
 const externalAssets = computed<{[globalAssetId: string]: ShellDescriptionSmallInterface}>(() => {

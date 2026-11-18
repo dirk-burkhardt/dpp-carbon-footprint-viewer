@@ -12,6 +12,7 @@ import CarbonData from '@/lib/model/CarbonData'
 import { toDescriptionSmall } from '@/lib/api/registry'
 import type { ShellDescriptionSmallInterface } from '@/lib/api/shellTypes'
 import CarbonFootprint, { loadCarbonFootprintData } from '@/lib/model/CarbonFootprint'
+import { fetchIndicators, type ApiIndicators } from '@/lib/api/products'
 import { IRI } from '@/lib/model/semanticIds'
 import { encodeBase64 } from '@/lib/encoding'
 
@@ -290,7 +291,8 @@ export async function loadFullAssetInfo(aasIdentifierOrUrl: string, idMap?: Asse
     address: Address,
     hierarchy?: AssetTree,
     carbonTree?: CarbonTree,
-    carbonFootprint?: CarbonFootprint
+    carbonFootprint?: CarbonFootprint,
+    indicators: ApiIndicators | null
   }> {
   const asset = await getAssetShell(aasIdentifierOrUrl, urlPrefix);
   const submodelReferences = await shells.submodelReferences(asset.id);
@@ -326,6 +328,8 @@ export async function loadFullAssetInfo(aasIdentifierOrUrl: string, idMap?: Asse
       description?.idShort || description?.name
     )
   }
+  // Reference quantities from Technical Data (mass, power), null if the API does not offer them
+  const indicators = await fetchIndicators(asset.id);
   return {
     asset,
     description,
@@ -334,7 +338,8 @@ export async function loadFullAssetInfo(aasIdentifierOrUrl: string, idMap?: Asse
     address,
     hierarchy,
     carbonTree,
-    carbonFootprint
+    carbonFootprint,
+    indicators
   }
 }
 

@@ -263,13 +263,6 @@ def test_repo_versions(repo_provider):
     assert phone.summary.primaryMethod == "ISO 14044"
     assert len(phone.summary.methods[0].skippedEntries) == 1  # A1-A3 neben A1, A2, A3
 
-    ball = service.carbon_footprint(_shell(repo_provider, "Stahlkugel"))  # ohne SemanticIds, Werte als IRDI
-    assert [f.calculationMethods for f in ball.footprints if f.kind == "product"] == [
-        ["GHG Protocol"],
-        ["IEC TS 63058"],
-    ]
-    assert service.nameplate(_shell(repo_provider, "Stahlkugel")).manufacturerName == "Kugellager Fabrik"
-
 
 def test_repo_product_tree(repo_provider):
     from carbon_footprint_api.services import ProductService

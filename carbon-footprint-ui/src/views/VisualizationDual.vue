@@ -24,6 +24,8 @@ import { co2eqByLifeCyclePhases, sortPhases, type Carbon } from '@/lib/carbonVal
 import { LifeCyclePhases, lifeCyclePhaseDescription, type LifeCyclePhase } from '@/lib/lifeCycleUtil'
 import BreadcrumbsBar from '@/components/BreadcrumbsBar.vue'
 import LoadFailed from '@/components/layout/LoadFailed.vue'
+import type { ApiIndicators } from '@/lib/api/products'
+import { referenceLabels, referenceMeasure, type ReferenceQuantity } from '@/lib/keyFigures'
 
 const route = useRoute();
 const idMap = inject<Ref<AssetIdMap>>(assetIdMapKey);
@@ -46,7 +48,7 @@ const infos = computedAsync(async () => {
   return Promise.all(data);
 }, undefined)
 
-type Side = { name: string, globalAssetId: string, carbon: Carbon | undefined }
+type Side = { name: string, globalAssetId: string, carbon: Carbon | undefined, indicators: ApiIndicators | null }
 const sides = computed<[Side, Side] | undefined>(() => {
   if (!infos.value) {
     return undefined;
@@ -55,6 +57,7 @@ const sides = computed<[Side, Side] | undefined>(() => {
     name: i.description?.name ?? i.asset.idShort ?? i.asset.id,
     globalAssetId: i.asset.assetInformation.globalAssetId ?? i.asset.id,
     carbon: i.carbonTree ?? i.carbonFootprint,
+    indicators: i.indicators,
   }));
   return [a, b];
 });
@@ -65,6 +68,24 @@ const mode = storageRef<'absolute' | 'difference'>('compareMode', 'absolute');
 const scalePerRow = storageRef<boolean>('compareScalePerRow', false);
 // "opposed": bars grow in two directions around a zero line; "grouped": both bars side by side in one direction
 const layout = storageRef<'opposed' | 'grouped'>('compareLayout', 'opposed');
+// Absolute values or CO2eq per kg / per watt (reference quantities from Technical Data)
+const reference = storageRef<'absolute' | ReferenceQuantity>('compareReference', 'absolute');
+const referenceAvailable = (quantity: ReferenceQuantity) =>
+  !!sides.value?.every((s) => (referenceMeasure(s.indicators, quantity)?.value ?? 0) > 0);
+const activeReference = computed<'absolute' | ReferenceQuantity>(() =>
+  reference.value !== 'absolute' && referenceAvailable(reference.value) ? reference.value : 'absolute');
+const referenceNote = computed(() => {
+  const q = activeReference.value;
+  if (q === 'absolute' || !sides.value) {
+    return undefined;
+  }
+  const { unit } = referenceLabels[q];
+  const values = sides.value.map((s) => `${s.name} ${Math.round(referenceMeasure(s.indicators, q)!.value * 1000) / 1000} ${unit}`);
+  return `Values per ${unit}, ${q} from Technical Data: ${values.join(', ')}.`;
+});
+/** Divisor of each side for the chosen reference */
+const divisors = computed(() => sides.value?.map((s) =>
+  activeReference.value === 'absolute' ? 1 : referenceMeasure(s.indicators, activeReference.value)!.value) ?? [1, 1]);
 
 type Row = { key: string, label: string, title?: string, group: string, a: number, b: number, strong?: boolean }
 const rows = computed<Row[]>(() => {
@@ -72,6 +93,7 @@ const rows = computed<Row[]>(() => {
     return [];
   }
   const [a, b] = sides.value.map((s) => s.carbon);
+  const [da, db] = divisors.value;
   const result: Row[] = [
     { key: 'total', label: 'Total', group: 'Total', a: a?.totalCo2eq ?? 0, b: b?.totalCo2eq ?? 0, strong: true },
     { key: 'transport', label: 'Transport', group: 'Transport Carbon Footprint', a: a?.transportCo2eq ?? 0, b: b?.transportCo2eq ?? 0, strong: true },
@@ -89,7 +111,7 @@ const rows = computed<Row[]>(() => {
       b: phasesB[phase] ?? 0,
     });
   }
-  return result;
+  return result.map((r) => ({ ...r, a: r.a / da, b: r.b / db }));
 });
 
 const globalMax = computed(() => Math.max(
@@ -117,7 +139,8 @@ function groupedWidth(percentOfMax: number) {
 }
 
 function format(value: number) {
-  return grams(value, 'kg');
+  const text = grams(value, 'kg');
+  return activeReference.value === 'absolute' ? text : `${text} ${referenceLabels[activeReference.value].per}`;
 }
 
 function relative(row: Row) {
@@ -148,7 +171,8 @@ const summary = computed(() => {
     return 'Both assets have the same total carbon footprint.';
   }
   const [lower, higher] = total.a < total.b ? [sides.value[0], sides.value[1]] : [sides.value[1], sides.value[0]];
-  return `${lower.name} emits ${relative(total)} less CO2eq in total than ${higher.name} (${format(Math.abs(total.a - total.b))} difference).`;
+  const per = activeReference.value === 'absolute' ? '' : ` ${referenceLabels[activeReference.value].per}`;
+  return `${lower.name} emits ${relative(total)} less CO2eq in total${per} than ${higher.name} (${format(Math.abs(total.a - total.b))} difference).`;
 });
 
 // Abgedeckte Lebenszyklusphasen: unterschiedliche Abdeckung verzerrt den Vergleich
@@ -199,6 +223,19 @@ const coverageDiffers = computed(() => {
         <button type="button" class="btn btn-sm join-item" :class="{ 'btn-primary': layout === 'opposed' }" @click="layout = 'opposed'">Opposed bars</button>
         <button type="button" class="btn btn-sm join-item" :class="{ 'btn-primary': layout === 'grouped' }" @click="layout = 'grouped'">Bars side by side</button>
       </div>
+      <div class="join" title="Absolute values or CO2eq per unit of a reference quantity from Technical Data, so assets of different size become comparable">
+        <button type="button" class="btn btn-sm join-item" :class="{ 'btn-primary': activeReference === 'absolute' }" @click="reference = 'absolute'">Absolute</button>
+        <button
+          v-for="q of (['mass', 'power'] as const)"
+          :key="q"
+          type="button"
+          class="btn btn-sm join-item"
+          :class="{ 'btn-primary': activeReference === q }"
+          :disabled="!referenceAvailable(q)"
+          :title="referenceAvailable(q) ? undefined : `Technical Data of at least one asset contains no ${referenceLabels[q].name}`"
+          @click="reference = q"
+        >{{ referenceLabels[q].per }}</button>
+      </div>
       <label class="flex items-center gap-2 text-sm cursor-pointer" title="Each row uses its own scale, so small values become visible">
         <input v-model="scalePerRow" type="checkbox" class="toggle toggle-sm" />
         Scale each row separately
@@ -207,6 +244,7 @@ const coverageDiffers = computed(() => {
       <span v-if="summary" class="text-sm">{{ summary }}</span>
     </div>
 
+    <p v-if="referenceNote" class="text-sm mt-3">{{ referenceNote }}</p>
     <p v-if="missingData.length" class="text-sm mt-3">
       No carbon footprint data for {{ missingData.join(' and ') }}. Its values are shown as zero.
     </p>

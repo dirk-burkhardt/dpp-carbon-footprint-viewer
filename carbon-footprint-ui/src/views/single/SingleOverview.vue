@@ -22,6 +22,7 @@ import {
 } from '@/lib/lifeCycleUtil'
 import type CarbonTree from '@/lib/model/CarbonTree'
 import TransportCarbonFootprintDiagram from '@/components/TransportCarbonFootprintDiagram.vue'
+import KeyFigures from '@/components/KeyFigures.vue'
 
 const props = defineProps<{ info: Awaited<ReturnType<typeof loadFullAssetInfo>>}>()
 
@@ -93,6 +94,13 @@ const lifeCyclePhases = computed(() => {
     <div class="alert alert-info col-span-6" v-if="!info.carbonFootprint && !info.carbonTree">
       Product or Transport Carbon Footprint data not available.
     </div>
+    <KeyFigures
+      v-else
+      class="col-span-6"
+      :total-co2eq="co2eq.total"
+      :indicators="info.indicators"
+      :carbon-tree="info.carbonTree"
+    />
     <OverflowingInfo v-model="showFootprintText" class="col-span-2 rounded-b-none border-b-0">
       The Carbon Footprint of the whole asset is
       <strong>{{ grams(co2eq?.total || 0, "kg", unit) }}</strong>,

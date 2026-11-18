@@ -1,6 +1,7 @@
 # Strategie: Technical Data und Hierarchical Structures für die CO2-Darstellung
 
-Stand: 18.11.2026. Konzept, noch nicht umgesetzt.
+Stand: 18.11.2026. Stufe 1 und 2 sind umgesetzt (API 4.7.0, Oberfläche 1.5.0), Stufe 3 und 4 warten auf die
+Entscheidungen unter „Offene Fragen“.
 
 ## Ausgangslage
 

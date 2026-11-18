@@ -4,6 +4,7 @@ import ComponentFootprintPlot from '@/components/ComponentFootprintPlot.vue'
 import CarbonSankeyDiagram from '@/components/CarbonSankeyDiagram.vue'
 import AssetTree from '@/components/AssetTree.vue'
 import ShellCard from '@/components/ShellCard.vue'
+import HotspotTable from '@/components/HotspotTable.vue'
 
 defineProps<{ info: Awaited<ReturnType<typeof loadFullAssetInfo>>}>()
 
@@ -25,6 +26,14 @@ defineProps<{ info: Awaited<ReturnType<typeof loadFullAssetInfo>>}>()
       <div class="card-body">
         <h2 class="card-title">Component Footprints</h2>
         <ComponentFootprintPlot :carbon-tree="info.carbonTree" />
+      </div>
+    </div>
+  </div>
+  <div class="col-span-6" v-if="info.carbonTree">
+    <div class="card bg-base-100">
+      <div class="card-body">
+        <h2 class="card-title">Hotspots</h2>
+        <HotspotTable :carbon-tree="info.carbonTree" />
       </div>
     </div>
   </div>

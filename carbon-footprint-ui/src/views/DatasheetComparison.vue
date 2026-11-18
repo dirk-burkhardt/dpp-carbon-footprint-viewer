@@ -10,7 +10,9 @@ import { computedAsync } from '@vueuse/core'
 import { sum } from 'lodash'
 import { ArrowTopRightOnSquareIcon, XMarkIcon } from '@heroicons/vue/24/outline'
 import { BackOnErrorHandler, currentLoadError } from '@/lib/BackOnErrorHandler'
-import { convertGrams, grams, loadFullAssetInfo, or, simulationFromRoute } from '@/lib/util'
+import { convertGrams, grams, loadFullAssetInfo, or, percent, simulationFromRoute } from '@/lib/util'
+import { describeSource } from '@/lib/api/products'
+import { analyzeStructure, intensity, referenceLabels, referenceMeasure, type StructureAnalysis } from '@/lib/keyFigures'
 import { AssetIdMap } from '@/lib/AssetIdMap'
 import { assetIdMapKey } from '@/lib/injectionKeys'
 import CarbonTree from '@/lib/model/CarbonTree'
@@ -91,6 +93,21 @@ const co2eqPhaseMax = computed(() => Object.fromEntries(availableCo2eqPhases.val
 /** Anteil am Zeilenmaximum für die Farbe der Zelle */
 function alpha(value: number | undefined, max: number) {
   return max > 0 && value ? (value / max) * 0.25 : 0;
+}
+
+// Reference quantities from Technical Data and CO2eq per unit (independent of the multiplier: per kg stays per kg)
+const indicators = computed(() => (infos.value || []).map(i => i.indicators));
+const referenceRows = computed(() => (['mass', 'power'] as const).map((q) => ({
+  quantity: q,
+  label: q === 'mass' ? 'Mass' : 'Power',
+  intensityLabel: `Total CO2eq ${referenceLabels[q].per}`,
+  measures: indicators.value.map((ind) => referenceMeasure(ind, q)),
+  intensities: carbon.value.map((c, i) => intensity(c?.totalCo2eq, referenceMeasure(indicators.value[i], q))),
+})).filter((r) => r.measures.some(Boolean)));
+const structures = computed(() => carbon.value.map((c) => (c instanceof CarbonTree && c.connectionsArray.length ? analyzeStructure(c) : undefined)));
+function ownShare(s: StructureAnalysis | undefined) {
+  const total = s ? s.ownProductCo2eq + s.componentsProductCo2eq : 0;
+  return s && total > 0 ? percent(s.ownProductCo2eq / total) : '';
 }
 
 const metaRows = [
@@ -213,6 +230,43 @@ const pinCombined = storageRef("pinCombinedColumn", false);
             <td v-for="(c, i) of carbon" :key="i" :class="{ 'no-copy opacity-50 italic': !c }">{{ c ? or(c.coveredLifeCyclePhases, () => (c instanceof CarbonTree ? `${c.byChildrenCoveredLifeCyclePhases} (from its components)` : undefined)) : 'no carbon footprint data' }}</td>
             <td v-if="!pinCombined && descriptions.length > 1">{{ LifeCyclePhases.merged(...carbon.map(c => c?.coveredLifeCyclePhases).filter(x => x !== undefined) as LifeCyclePhases[]) }}</td>
           </tr>
+          <template v-for="r of referenceRows" :key="r.quantity">
+            <tr>
+              <th>{{ r.label }}</th>
+              <td v-if="pinCombined && descriptions.length > 1" class="no-copy"></td>
+              <td v-for="(m, i) of r.measures" :key="i" :title="m ? describeSource(m) : undefined" :data-copy="m ? m.value : ''">
+                {{ m ? `${Math.round(m.value * 1000) / 1000} ${m.unit}` : '' }}
+              </td>
+              <td v-if="!pinCombined && descriptions.length > 1" class="no-copy"></td>
+            </tr>
+            <tr>
+              <th>{{ r.intensityLabel }}</th>
+              <td v-if="pinCombined && descriptions.length > 1" class="no-copy"></td>
+              <td
+                v-for="(v, i) of r.intensities"
+                :key="i"
+                :data-copy="v !== undefined ? convertGrams(v, 'kg', 'g') : ''"
+                :data-copy-explanation="`CO2eq in g ${referenceLabels[r.quantity].per}`"
+              >{{ v !== undefined ? grams(v, 'kg') : '' }}</td>
+              <td v-if="!pinCombined && descriptions.length > 1" class="no-copy"></td>
+            </tr>
+          </template>
+          <template v-if="structures.some(Boolean)">
+            <tr>
+              <th title="Product emissions of the asset itself compared with those of its components">Own manufacturing</th>
+              <td v-if="pinCombined && descriptions.length > 1" class="no-copy"></td>
+              <td v-for="(s, i) of structures" :key="i">{{ ownShare(s) }}</td>
+              <td v-if="!pinCombined && descriptions.length > 1" class="no-copy"></td>
+            </tr>
+            <tr>
+              <th title="Components at the lowest level of the product structure that provide an own carbon footprint">Data coverage of components</th>
+              <td v-if="pinCombined && descriptions.length > 1" class="no-copy"></td>
+              <td v-for="(s, i) of structures" :key="i">
+                {{ s ? `${s.coverage !== undefined ? percent(s.coverage) : 'none'} (${s.leafComponentsWithFootprint} of ${s.leafComponents})` : '' }}
+              </td>
+              <td v-if="!pinCombined && descriptions.length > 1" class="no-copy"></td>
+            </tr>
+          </template>
           <tr v-for="phase of availableCo2eqPhases" :key="phase" class="hover-with-before">
             <th>{{ phase }}</th>
             <td

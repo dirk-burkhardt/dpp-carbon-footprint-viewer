@@ -9,6 +9,7 @@ from ..repository import AssetRepository
 from ..submodels import (
     Hierarchy,
     Semantics,
+    derive_indicators,
     detect,
     parse_carbon_footprint,
     parse_handover_documentation,
@@ -22,6 +23,7 @@ from ..submodels.hierarchy import bulk_count
 from ..submodels.models import (
     CarbonFootprintResult,
     HandoverDocumentation,
+    Indicators,
     LangText,
     MaintenanceInstructions,
     Nameplate,
@@ -59,6 +61,9 @@ class ProductService:
         semantics = self._semantics()
         found = (parse_technical_data(sm, detect(sm), semantics) for sm in self._filled(shell_id))
         return [t for t in found if t is not None]
+
+    def indicators(self, shell_id: str) -> Indicators:
+        return derive_indicators(self.technical_data(shell_id))
 
     def documentation(self, shell_id: str) -> list[HandoverDocumentation]:
         found = (parse_handover_documentation(sm) for sm in self._filled(shell_id))

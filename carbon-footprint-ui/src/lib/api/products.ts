@@ -141,3 +141,59 @@ export function toCarbonFootprintType(result: ApiCarbonFootprintResult, source: 
   }
   return carbonFootprint
 }
+
+export type ApiMeasureSource = {
+  submodelId?: string | null
+  path: string[]
+  idShort?: string | null
+  name?: string | null
+  semanticId?: string | null
+  value?: string | null
+  unit?: string | null
+}
+
+export type ApiMeasure = {
+  /** Value in the SI unit: kg, W, m or a (years) */
+  value: number
+  unit: string
+  source: ApiMeasureSource
+}
+
+/** Reference quantities of a product from Technical Data (endpoint /products/{id}/indicators) */
+export type ApiIndicators = {
+  mass?: ApiMeasure | null
+  power?: ApiMeasure | null
+  lifetime?: ApiMeasure | null
+  width?: ApiMeasure | null
+  height?: ApiMeasure | null
+  depth?: ApiMeasure | null
+  volume?: number | null
+  materials: { name: string, value: string, source: ApiMeasureSource }[]
+  warnings: string[]
+}
+
+const indicatorCache = new Map<string, Promise<ApiIndicators | null>>()
+
+/** Reference quantities of a shell, null if the API does not offer them. Cached per shell. */
+export function fetchIndicators(aasIdentifier: string): Promise<ApiIndicators | null> {
+  let result = indicatorCache.get(aasIdentifier)
+  if (!result) {
+    const base = apiConfig.assetAdministrationShellRepositoryUrl.replace(/\/+$/, '')
+    result = fetch(`${base}/products/${encodeId(aasIdentifier)}/indicators`)
+      .then((response) => (response.ok ? (response.json() as Promise<ApiIndicators>) : null))
+      .catch(() => null)
+    indicatorCache.set(aasIdentifier, result)
+    result.then((r) => r ?? indicatorCache.delete(aasIdentifier))
+  }
+  return result
+}
+
+/** Short description of where a value comes from, e.g. for a tooltip */
+export function describeSource(measure: ApiMeasure): string {
+  const { source } = measure
+  const name = source.name || source.idShort || 'property'
+  const given = [source.value, source.value && source.unit && !source.value.includes(source.unit) ? source.unit : '']
+    .filter(Boolean)
+    .join(' ')
+  return `Technical Data: ${[...source.path, name].join(' › ')} = ${given}`
+}

@@ -2,6 +2,14 @@
 
 Änderungen der DPPviewer-Oberfläche, neueste Version oben. Versionen nach [Semantic Versioning](https://semver.org/lang/de/), siehe [README](README.md#versionierung).
 
+## 1.5.0 – 2026-11-18
+
+- Kennzahlen im Overview: CO2eq je kg und je W (aus Technical Data), Anteil der eigenen Fertigung und Datenabdeckung der Komponenten
+- Components: Tabelle „Hotspots“ mit den Komponenten, die zusammen 80 % der deklarierten Emissionen verursachen (je Komponente der eigene Anteil für alle Einheiten)
+- Compare: Umschalter „Absolute / per kg / per W“, gesperrt, wenn einem Asset die Angabe fehlt
+- Datasheet: Zeilen Masse, Leistung, CO2eq je kg und je W, eigene Fertigung und Datenabdeckung
+- Brotkrümel „Asset Selection“ öffnet wieder den zuletzt gezeigten Reiter (z. B. External assets)
+
 ## 1.4.0 – 2026-11-18
 
 - Über Links geladene und hochgeladene Dateien bleiben im Browser unter External assets gelistet, auch nach dem Wechsel zur Übersicht oder einem Neuladen, bis sie nach der Zeit des Servers ablaufen oder entfernt werden

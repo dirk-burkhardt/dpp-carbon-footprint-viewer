@@ -71,6 +71,7 @@ Vorrang.
 | `GET /api/v4/products/{id}/carbon-footprint` | Carbon Footprints aller Versionen, normalisiert, mit Zusammenfassung |
 | `GET /api/v4/products/{id}/nameplate` | Hersteller und Adresse aus dem Typenschild |
 | `GET /api/v4/products/{id}/technical-data` | Technische Daten mit Namen, Einheiten und Definitionen aus den ConceptDescriptions |
+| `GET /api/v4/products/{id}/indicators` | Bezugsgrößen aus Technical Data in SI-Einheiten (Masse in kg, Leistung in W, Lebensdauer in Jahren, Maße in m, Volumen) mit Fundstelle, außerdem Materialangaben; erkennt ECLASS-IDs, übliche Namen und Einheiten im Wert (`"2,250 g"`) |
 | `GET /api/v4/products/{id}/documentation` | Dokumente aus Handover Documentation / VDI 2770 |
 | `GET /api/v4/products/{id}/maintenance` | Wartungsintervalle, -schritte, Werkzeuge, Verbrauchsmaterial, Ersatzteile |
 | `GET /api/v4/products/{id}/details` | Alles zusammen: Templates, Typenschild, technische Daten, Dokumente, Wartung |

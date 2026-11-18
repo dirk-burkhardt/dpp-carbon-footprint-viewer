@@ -12,6 +12,7 @@ from ...submodels import catalog
 from ...submodels.models import (
     CarbonFootprintResult,
     HandoverDocumentation,
+    Indicators,
     MaintenanceInstructions,
     Nameplate,
     ProductDetails,
@@ -66,6 +67,17 @@ def templates(repo: Repository, aasIdentifier: str = AAS_ID) -> list[TemplateInf
 )
 def carbon_footprint(repo: Repository, aasIdentifier: str = AAS_ID) -> CarbonFootprintResult:
     return ProductService(repo).carbon_footprint(_shell_id(repo, aasIdentifier))
+
+
+@router.get(
+    "/{aasIdentifier}/indicators",
+    description="Reference quantities from Technical Data in SI units (mass in kg, power in W, service life in "
+    "years, dimensions in m) with their source, e.g. to state CO2eq per kg or per watt",
+    responses=NOT_FOUND,
+    response_model=Indicators,
+)
+def indicators(repo: Repository, aasIdentifier: str = AAS_ID) -> Indicators:
+    return ProductService(repo).indicators(_shell_id(repo, aasIdentifier))
 
 
 @router.get(

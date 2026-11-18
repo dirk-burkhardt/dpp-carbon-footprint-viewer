@@ -2,6 +2,10 @@
 
 Änderungen der Carbon-Footprint-API, neueste Version oben. Versionen nach [Semantic Versioning](https://semver.org/lang/de/), siehe [README](README.md#versionierung).
 
+## 4.7.0 – 2026-11-18
+
+- Neuer Endpunkt /products/{id}/indicators: Bezugsgrößen aus Technical Data in SI-Einheiten (Masse, Leistung, Lebensdauer, Maße, Volumen) mit Fundstelle und Materialangaben
+
 ## 4.6.0 – 2026-11-18
 
 - Uploads werden mit CFA_UPLOAD_DIR in einem Ordner abgelegt (im Container repo/uploads, getrennt vom statischen Bestand), Anhänge werden aus der Datei gelesen; beim Start werden frühere Uploads dort gelöscht, andere Dateien bleiben unberührt; ist der Ordner nicht beschreibbar, bleiben Uploads im Arbeitsspeicher

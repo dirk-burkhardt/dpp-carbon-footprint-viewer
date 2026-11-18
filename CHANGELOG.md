@@ -4,6 +4,12 @@ Changelog des Gesamtprojekts. Einträge nach Datum, je Zeile der Teil mit seiner
 
 ## 2026-11-18
 
+- UI 1.5.0: Kennzahlen im Overview: CO2eq je kg und je W (aus Technical Data), Anteil der eigenen Fertigung und Datenabdeckung der Komponenten
+- UI 1.5.0: Components: Tabelle „Hotspots“ mit den Komponenten, die zusammen 80 % der deklarierten Emissionen verursachen (je Komponente der eigene Anteil für alle Einheiten)
+- UI 1.5.0: Compare: Umschalter „Absolute / per kg / per W“, gesperrt, wenn einem Asset die Angabe fehlt
+- UI 1.5.0: Datasheet: Zeilen Masse, Leistung, CO2eq je kg und je W, eigene Fertigung und Datenabdeckung
+- UI 1.5.0: Brotkrümel „Asset Selection“ öffnet wieder den zuletzt gezeigten Reiter (z. B. External assets)
+- API 4.7.0: Neuer Endpunkt /products/{id}/indicators: Bezugsgrößen aus Technical Data in SI-Einheiten (Masse, Leistung, Lebensdauer, Maße, Volumen) mit Fundstelle und Materialangaben
 - UI 1.4.0: Über Links geladene und hochgeladene Dateien bleiben im Browser unter External assets gelistet, auch nach dem Wechsel zur Übersicht oder einem Neuladen, bis sie nach der Zeit des Servers ablaufen oder entfernt werden
 - API 4.6.0: Über Links geladene Dateien werden nach `CFA_UPLOAD_TTL_HOURS` verworfen und beim nächsten Abruf neu geladen
 - API 4.6.0: Option `--uploadDir`

@@ -9,6 +9,7 @@ from .aggregation import summarize
 from .carbon_footprint import parse_carbon_footprint
 from .handover import parse_handover_documentation
 from .hierarchy import Hierarchy, parse_hierarchy
+from .indicators import derive_indicators
 from .maintenance import parse_maintenance_instructions
 from .nameplate import parse_nameplate
 from .registry import catalog, detect, families
@@ -19,6 +20,7 @@ __all__ = [
     "Hierarchy",
     "Semantics",
     "catalog",
+    "derive_indicators",
     "detect",
     "families",
     "parse_carbon_footprint",

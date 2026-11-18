@@ -6,6 +6,7 @@ import {
 } from 'vue-router'
 import { computed } from 'vue'
 import { ArrowLeftIcon } from '@heroicons/vue/24/outline'
+import { assetSelectionQuery } from '@/lib/assetSelectionState'
 
 const router = useRouter();
 const routesByPath = Object.fromEntries(router.getRoutes().map((r) => [r.path, r]))
@@ -14,6 +15,12 @@ const terminusRoute = routesByPath["/"];
 if (!terminusRoute) {
   console.error("Breadcrumbs terminus not correctly set")
 }
+// Shared external sources stay part of the link back
+function preloadQuery() {
+  const { preload } = router.currentRoute.value.query;
+  return preload ? { preload } : {};
+}
+
 const routePath = computed(() => {
   let c: RouteLocation = router.currentRoute.value;
   const p: [RouteLocationRaw, string][] = [
@@ -43,7 +50,13 @@ const routePath = computed(() => {
   if (c.path !== terminusRoute.path) {
     p.unshift([terminusRoute, terminusRoute.meta.breadcrumb as string]);
   }
-  return p;
+  // The asset selection opens the tab it showed last (e.g. "External assets"), keeping loaded sources
+  return p.map(([location, label], i): [RouteLocationRaw, string] => {
+    const isSelection = i < p.length - 1 && router.resolve(location).name === 'home';
+    return isSelection
+      ? [{ name: 'home', query: { ...preloadQuery(), ...assetSelectionQuery() } }, label]
+      : [location, label];
+  });
 })
 
 // Ziel des Zurück-Pfeils: der vorletzte Eintrag der Brotkrümel

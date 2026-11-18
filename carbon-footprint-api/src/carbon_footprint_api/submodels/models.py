@@ -331,3 +331,46 @@ class ProductDetails(BaseModel):
     technicalData: list[TechnicalData] = []
     documentation: list[HandoverDocumentation] = []
     maintenance: list[MaintenanceInstructions] = []
+
+
+# --------------------------------------------------------------------------------------------------------------
+# Reference quantities for carbon footprint intensities (derived from Technical Data)
+# --------------------------------------------------------------------------------------------------------------
+
+
+class MeasureSource(BaseModel):
+    """Where a reference quantity was found."""
+
+    submodelId: Optional[str] = None
+    path: list[str] = []
+    idShort: Optional[str] = None
+    name: Optional[str] = None
+    semanticId: Optional[str] = None
+    value: Optional[str] = Field(default=None, description="Value as given in the file")
+    unit: Optional[str] = Field(default=None, description="Unit as given in the file (or in the value)")
+
+
+class Measure(BaseModel):
+    value: float = Field(description="Value in the SI unit of the measure")
+    unit: str = Field(description="kg, W, m or a (years)")
+    source: MeasureSource
+
+
+class MaterialInfo(BaseModel):
+    name: str
+    value: str
+    source: MeasureSource
+
+
+class Indicators(BaseModel):
+    """Reference quantities of a product, e.g. to state CO2eq per kg or per watt."""
+
+    mass: Optional[Measure] = None
+    power: Optional[Measure] = Field(default=None, description="Power consumption or rated power")
+    lifetime: Optional[Measure] = Field(default=None, description="Service life in years")
+    width: Optional[Measure] = None
+    height: Optional[Measure] = None
+    depth: Optional[Measure] = None
+    volume: Optional[float] = Field(default=None, description="width × height × depth in m³")
+    materials: list[MaterialInfo] = []
+    warnings: list[str] = []
