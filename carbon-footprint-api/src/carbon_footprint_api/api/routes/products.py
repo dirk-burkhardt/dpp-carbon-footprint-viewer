@@ -5,12 +5,14 @@ from __future__ import annotations
 from http import HTTPStatus
 from typing import Any, Optional
 
-from fastapi import APIRouter, Path
+from fastapi import APIRouter, Path, Query
 
+from ...estimates import EstimateParameters
 from ...services import ProductService
 from ...submodels import catalog
 from ...submodels.models import (
     CarbonFootprintResult,
+    Estimates,
     HandoverDocumentation,
     Indicators,
     MaintenanceInstructions,
@@ -78,6 +80,36 @@ def carbon_footprint(repo: Repository, aasIdentifier: str = AAS_ID) -> CarbonFoo
 )
 def indicators(repo: Repository, aasIdentifier: str = AAS_ID) -> Indicators:
     return ProductService(repo).indicators(_shell_id(repo, aasIdentifier))
+
+
+@router.get(
+    "/{aasIdentifier}/estimates",
+    description="Estimated emissions for life cycle phases that no declared footprint covers (production A1-A3 "
+    "only without declared product footprint, transport A4, energy in use B6, end of life C1-C4), each with "
+    "formula, inputs and sources, and a plausibility check of the declared production footprint. Factors: DESNZ "
+    "conversion factors and EEA electricity intensity (both annual), service lives from the German AfA table AV.",
+    responses=NOT_FOUND,
+    response_model=Estimates,
+)
+def estimates(
+    repo: Repository,
+    aasIdentifier: str = AAS_ID,
+    country: str = Query("EU", pattern=r"^[A-Za-z]{2}$", description="Country of use (ISO 3166-1 alpha-2, EU = EU-27)"),
+    lifetimeYears: Optional[float] = Query(
+        None, gt=0, le=100, description="Service life, default of the product class"
+    ),
+    hoursPerYear: Optional[float] = Query(None, gt=0, le=8784, description="Operating hours per year"),
+    transportKm: Optional[float] = Query(None, ge=0, le=40000, description="Distance of the transport to the customer"),
+    transportMode: str = Query("road", pattern=r"^[a-z]{2,10}$", description="road, van, rail, sea or air"),
+) -> Estimates:
+    params = EstimateParameters(
+        country=country,
+        lifetime_years=lifetimeYears,
+        hours_per_year=hoursPerYear,
+        transport_km=transportKm,
+        transport_mode=transportMode,
+    )
+    return ProductService(repo).estimates(_shell_id(repo, aasIdentifier), params)
 
 
 @router.get(

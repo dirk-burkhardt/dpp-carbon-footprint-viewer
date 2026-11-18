@@ -18,7 +18,7 @@ dependencies = [
 
 [project.optional-dependencies]
 test = ["pytest>=9.2.0"]
-dev = ["pytest>=9.2.0", "ruff>=0.17.5", "mypy>=2.4.1", "pip-audit>=2.10.1", "lxml-stubs>=0.5.1"]
+dev = ["pytest>=9.2.0", "ruff>=0.17.5", "mypy>=2.4.1", "pip-audit>=2.10.1", "lxml-stubs>=0.5.1", "openpyxl>=3.1.5"]
 
 [project.scripts]
 carbon-footprint-api = "carbon_footprint_api.__main__:main"
@@ -30,7 +30,7 @@ version = { attr = "carbon_footprint_api.__version__" }
 where = ["src"]
 
 [tool.setuptools.package-data]
-carbon_footprint_api = ["submodels/*.json"]
+carbon_footprint_api = ["submodels/*.json", "estimates/*.json"]
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]

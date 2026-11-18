@@ -2,6 +2,12 @@
 
 Änderungen der DPPviewer-Oberfläche, neueste Version oben. Versionen nach [Semantic Versioning](https://semver.org/lang/de/), siehe [README](README.md#versionierung).
 
+## 1.6.0 – 2026-11-18
+
+- Neue Ansicht Estimates (nach Components) mit Annahmen, Formeln, Eingangswerten und Quellen; Schätzungen schraffiert im Overview und in Life Cycles, standardmäßig eingeblendet und abschaltbar
+- Life Cycles: neues Diagramm „Declared and Estimated Emissions per Phase“, deklariert flächig, geschätzt schraffiert
+- Overview: Kennzahlen auch für Assets ohne Carbon Footprint (z. B. geschätzte Herstellung)
+
 ## 1.5.0 – 2026-11-18
 
 - Kennzahlen im Overview: CO2eq je kg und je W (aus Technical Data), Anteil der eigenen Fertigung und Datenabdeckung der Komponenten

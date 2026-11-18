@@ -1,0 +1,199 @@
+{
+  "_comment": "Defaults per product class for the estimates, maintained by hand; every value names its origin. Service lives from the German AfA table AV, operating hours are assumptions of the DPPviewer and can be changed in the user interface. Material groups refer to factors.json.",
+  "sources": {
+    "afa-av": {
+      "title": "AfA-Tabelle für die allgemein verwendbaren Anlagegüter (German depreciation table AV)",
+      "publisher": "Bundesministerium der Finanzen (German Federal Ministry of Finance)",
+      "edition": "BMF-Schreiben vom 15.12.2000, IV D 2 - S 1551 - 188/00, BStBl I 2000, 1532",
+      "updated": "no annual edition; customary service life for tax purposes, based on experience of tax audits",
+      "license": "official work (§ 5 UrhG)",
+      "url": "https://www.bundesfinanzministerium.de/Web/DE/Themen/Steuern/Steuerverwaltungu-Steuerrecht/Betriebspruefung/AfA_Tabellen/afa_tabellen.html"
+    },
+    "dppviewer": {
+      "title": "Assumption of the DPPviewer",
+      "publisher": "DPPviewer",
+      "edition": "2026",
+      "updated": "when needed",
+      "license": "Apache-2.0",
+      "url": null
+    }
+  },
+  "default": {
+    "label": "No product class recognized",
+    "lifetime": {
+      "years": 12,
+      "source": "afa-av",
+      "reference": "median of the service lives of all 75 assets in sections 3 (general plants) and 5 (machining and processing machines)"
+    },
+    "hoursPerYear": {
+      "hours": 2000,
+      "source": "dppviewer",
+      "reference": "single shift: 250 working days × 8 hours"
+    },
+    "material": null
+  },
+  "eclass": [
+    {
+      "prefix": "19",
+      "label": "ECLASS segment 19: Information, communication and media technology",
+      "lifetime": {
+        "years": 3,
+        "source": "afa-av",
+        "reference": "No. 6.14.3.2 Workstations, Personalcomputer, Notebooks und Peripheriegeräte"
+      },
+      "hoursPerYear": {
+        "hours": 2000,
+        "source": "dppviewer",
+        "reference": "single shift: 250 working days × 8 hours"
+      },
+      "material": "electrical-it"
+    },
+    {
+      "prefix": "27",
+      "label": "ECLASS segment 27: Electrical engineering, automation, process control engineering",
+      "lifetime": {
+        "years": 18,
+        "source": "afa-av",
+        "reference": "No. 3.3.1 Mess- und Regeleinrichtungen, allgemein"
+      },
+      "hoursPerYear": {
+        "hours": 4000,
+        "source": "dppviewer",
+        "reference": "two shifts in production: 250 working days × 16 hours"
+      },
+      "material": "electrical-small"
+    },
+    {
+      "prefix": "32",
+      "label": "ECLASS segment 32: Laboratory material and technology",
+      "lifetime": {
+        "years": 14,
+        "source": "afa-av",
+        "reference": "No. 6.1 Wirtschaftsgüter der Werkstätten-, Labor- und Lagereinrichtungen"
+      },
+      "hoursPerYear": {
+        "hours": 2000,
+        "source": "dppviewer",
+        "reference": "single shift: 250 working days × 8 hours"
+      },
+      "material": "electrical-small"
+    },
+    {
+      "prefix": "36",
+      "label": "ECLASS segment 36: Machines, apparatus",
+      "lifetime": {
+        "years": 13,
+        "source": "afa-av",
+        "reference": "No. 5.27 Sonstige Be- und Verarbeitungsmaschinen"
+      },
+      "hoursPerYear": {
+        "hours": 4000,
+        "source": "dppviewer",
+        "reference": "two shifts in production: 250 working days × 16 hours"
+      },
+      "material": "electrical-large"
+    }
+  ],
+  "espr": {
+    "batteries": {
+      "label": "ESPR product category batteries",
+      "lifetime": {
+        "years": 10,
+        "source": "afa-av",
+        "reference": "No. 3.1.3 Akkumulatoren"
+      },
+      "hoursPerYear": null,
+      "material": "battery-li-ion"
+    },
+    "electronics": {
+      "label": "ESPR product category electronics",
+      "lifetime": {
+        "years": 8,
+        "source": "afa-av",
+        "reference": "No. 6.13.2.1 Kommunikationsendgeräte, allgemein"
+      },
+      "hoursPerYear": {
+        "hours": 2000,
+        "source": "dppviewer",
+        "reference": "single shift: 250 working days × 8 hours"
+      },
+      "material": "electrical-small"
+    },
+    "iron-steel": {
+      "label": "ESPR product category iron and steel",
+      "lifetime": null,
+      "hoursPerYear": null,
+      "material": "metal-mixed"
+    },
+    "textiles": {
+      "label": "ESPR product category textiles",
+      "lifetime": null,
+      "hoursPerYear": null,
+      "material": "textiles"
+    },
+    "toys": {
+      "label": "ESPR product category toys",
+      "lifetime": null,
+      "hoursPerYear": null,
+      "material": "plastics"
+    }
+  },
+  "materialKeywords": [
+    {
+      "pattern": "alumin",
+      "material": "aluminium"
+    },
+    {
+      "pattern": "stahl|steel|inox|edelstahl|eisen|iron|guss",
+      "material": "steel"
+    },
+    {
+      "pattern": "messing|brass|kupfer|copper|zink|zinc|bronze|metall|metal",
+      "material": "metal-mixed"
+    },
+    {
+      "pattern": "\\bpp\\b|polypropylen",
+      "material": "plastics-pp"
+    },
+    {
+      "pattern": "\\bpvc\\b|polyvinylchlorid",
+      "material": "plastics-pvc"
+    },
+    {
+      "pattern": "\\bpet\\b|polyethylenterephthalat",
+      "material": "plastics-pet"
+    },
+    {
+      "pattern": "\\bhdpe\\b|\\bpe\\b|polyethylen",
+      "material": "plastics-hdpe"
+    },
+    {
+      "pattern": "\\bps\\b|polystyrol|polystyrene",
+      "material": "plastics-ps"
+    },
+    {
+      "pattern": "nbr|fkm|epdm|hnbr|elastomer|gummi|rubber|silikon|silicone",
+      "material": "rubber"
+    },
+    {
+      "pattern": "polyamid|\\bpa\\b|pa6|pa 6|pom|polyacetal|\\babs\\b|\\bpbt\\b|polycarbonat|\\bpc\\b|\\btpe\\b|\\btpu\\b|\\bpu\\b|polyurethan|kunststoff|plastic|polymer",
+      "material": "plastics"
+    },
+    {
+      "pattern": "glas|glass",
+      "material": "glass"
+    },
+    {
+      "pattern": "papier|paper|karton|pappe|cardboard",
+      "material": "paper"
+    },
+    {
+      "pattern": "holz|wood",
+      "material": "wood"
+    },
+    {
+      "pattern": "baumwolle|cotton|textil|fabric|polyester",
+      "material": "textiles"
+    }
+  ]
+}

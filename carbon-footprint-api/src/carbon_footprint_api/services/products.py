@@ -5,6 +5,7 @@ from __future__ import annotations
 from typing import Optional
 
 from ..aas.model import AasObject
+from ..estimates import EstimateParameters, estimate
 from ..repository import AssetRepository
 from ..submodels import (
     Hierarchy,
@@ -22,6 +23,7 @@ from ..submodels import (
 from ..submodels.hierarchy import bulk_count
 from ..submodels.models import (
     CarbonFootprintResult,
+    Estimates,
     HandoverDocumentation,
     Indicators,
     LangText,
@@ -64,6 +66,10 @@ class ProductService:
 
     def indicators(self, shell_id: str) -> Indicators:
         return derive_indicators(self.technical_data(shell_id))
+
+    def estimates(self, shell_id: str, params: EstimateParameters) -> Estimates:
+        technical_data = self.technical_data(shell_id)
+        return estimate(self.carbon_footprint(shell_id), derive_indicators(technical_data), technical_data, params)
 
     def documentation(self, shell_id: str) -> list[HandoverDocumentation]:
         found = (parse_handover_documentation(sm) for sm in self._filled(shell_id))

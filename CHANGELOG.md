@@ -4,6 +4,13 @@ Changelog des Gesamtprojekts. Einträge nach Datum, je Zeile der Teil mit seiner
 
 ## 2026-11-18
 
+- UI 1.6.0: Neue Ansicht Estimates (nach Components) mit Annahmen, Formeln, Eingangswerten und Quellen; Schätzungen schraffiert im Overview und in Life Cycles, standardmäßig eingeblendet und abschaltbar
+- UI 1.6.0: Life Cycles: neues Diagramm „Declared and Estimated Emissions per Phase“, deklariert flächig, geschätzt schraffiert
+- UI 1.6.0: Overview: Kennzahlen auch für Assets ohne Carbon Footprint (z. B. geschätzte Herstellung)
+- API 4.8.0: Werkzeug `tools/update_factors.py` übernimmt die Faktoren jährlich aus den amtlichen Dateien in `factor-sources/` (openpyxl als Entwicklungsabhängigkeit)
+- API 4.8.0: Vergleichsdaten der Tests auf den jetzigen Inhalt von `repo` neu aufgenommen, Test zur entfernten Datei „Stahlkugel“ entfernt
+- `CLAUDE.md`: jährliche Aktualisierung der Emissionsfaktoren; Strategie-Dokument um die Entscheidungen ergänzt
+- API 4.8.0: Neuer Endpunkt /products/{id}/estimates: Schätzungen für Lebenszyklusphasen ohne deklarierten Footprint (A1-A3 nur ohne Product Footprint, sonst Plausibilitätsprüfung; A4, B6, C1-C4) mit Formel, Eingangswerten und Quellen; Faktoren von DESNZ 2026 und EEA 2024, Nutzungsdauern aus der AfA-Tabelle AV, Voreinstellungen je ECLASS-Segment oder ESPR-Kategorie
 - UI 1.5.0: Kennzahlen im Overview: CO2eq je kg und je W (aus Technical Data), Anteil der eigenen Fertigung und Datenabdeckung der Komponenten
 - UI 1.5.0: Components: Tabelle „Hotspots“ mit den Komponenten, die zusammen 80 % der deklarierten Emissionen verursachen (je Komponente der eigene Anteil für alle Einheiten)
 - UI 1.5.0: Compare: Umschalter „Absolute / per kg / per W“, gesperrt, wenn einem Asset die Angabe fehlt

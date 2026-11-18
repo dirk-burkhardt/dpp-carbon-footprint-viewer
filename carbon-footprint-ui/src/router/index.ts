@@ -55,6 +55,15 @@ const router = createRouter({
           },
         },
         {
+          path: "/shells/:asset/estimates",
+          name: "visualization.single.estimates",
+          component: () => import("@/views/single/SingleEstimates.vue"),
+          meta: {
+            back: "visualization.single",
+            breadcrumb: "Estimates"
+          },
+        },
+        {
           path: "/shells/:asset/simulation",
           name: "visualization.single.simulation",
           component: () => import("@/views/single/SingleSimulation.vue"),

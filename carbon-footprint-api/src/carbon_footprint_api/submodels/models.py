@@ -374,3 +374,76 @@ class Indicators(BaseModel):
     volume: Optional[float] = Field(default=None, description="width × height × depth in m³")
     materials: list[MaterialInfo] = []
     warnings: list[str] = []
+
+
+# --------------------------------------------------------------------------------------------------------------
+# Estimates for life cycle phases without declared footprint
+# --------------------------------------------------------------------------------------------------------------
+
+
+class SourceInfo(BaseModel):
+    """A publication the estimates rely on."""
+
+    key: str
+    title: str
+    publisher: str
+    edition: Optional[str] = None
+    updated: Optional[str] = Field(default=None, description="How often the source is republished")
+    license: Optional[str] = None
+    url: Optional[str] = None
+
+
+class EstimateValue(BaseModel):
+    """An input or factor of an estimate with its origin."""
+
+    name: str
+    value: float
+    unit: str
+    origin: Literal["file", "class", "assumption", "user", "factor"] = Field(
+        description="file: from the shell; class: default of the product class; assumption: general default; "
+        "user: set in the request; factor: emission factor of a source"
+    )
+    source: Optional[str] = Field(default=None, description="Key of the source in Estimates.sources")
+    reference: Optional[str] = Field(default=None, description="Where in the shell or source the value is found")
+
+
+class PhaseEstimate(BaseModel):
+    phase: str = Field(description="Life cycle phase(s), e.g. B6 or A1-A3")
+    label: str
+    status: Literal["estimated", "declared", "missing"] = Field(
+        description="estimated: computed here; declared: covered by a declared footprint, not estimated; "
+        "missing: cannot be estimated, see reason"
+    )
+    co2eq: Optional[float] = Field(default=None, description="kg CO2e")
+    formula: Optional[str] = None
+    inputs: list[EstimateValue] = []
+    reason: Optional[str] = None
+
+
+class ProductClassInfo(BaseModel):
+    system: Optional[str] = None
+    classId: Optional[str] = None
+    label: str
+    matchedBy: Optional[str] = Field(default=None, description="Which classification of the shell was used")
+
+
+class Plausibility(BaseModel):
+    """Declared production footprint (A1-A3) compared with a rough estimate from mass and material."""
+
+    declaredCo2eq: float
+    estimatedCo2eq: float
+    ratio: float = Field(description="declared / estimated")
+    assessment: Literal["plausible", "low", "high"]
+    note: str
+
+
+class Estimates(BaseModel):
+    productClass: ProductClassInfo
+    material: Optional[EstimateValue] = Field(default=None, description="Material group used for the factors")
+    phases: list[PhaseEstimate] = []
+    estimatedCo2eq: float = Field(default=0.0, description="Sum of all estimated phases, kg CO2e")
+    plausibility: Optional[Plausibility] = None
+    countries: list[str] = Field(default=[], description="Countries with an electricity factor (EU = EU-27)")
+    transportModes: dict[str, str] = {}
+    sources: list[SourceInfo] = []
+    warnings: list[str] = []

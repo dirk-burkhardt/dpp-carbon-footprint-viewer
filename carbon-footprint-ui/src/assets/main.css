@@ -211,3 +211,10 @@ svg:not([class*="plot-"]) text:not([fill]) {
 [class*=" plot-"] {
   --plot-background: var(--color-base-100);
 }
+
+/* Estimated values: hatched, so they are clearly distinguishable from declared values (solid) */
+.estimate-fill {
+  background-color: color-mix(in oklab, var(--color-warning) 12%, transparent);
+  background-image: repeating-linear-gradient(135deg, var(--color-warning) 0 2px, transparent 2px 7px);
+  box-shadow: inset 0 0 0 1px var(--color-warning);
+}

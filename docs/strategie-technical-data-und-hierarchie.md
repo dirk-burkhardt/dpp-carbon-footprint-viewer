@@ -1,7 +1,7 @@
 # Strategie: Technical Data und Hierarchical Structures für die CO2-Darstellung
 
-Stand: 18.11.2026. Stufe 1 und 2 sind umgesetzt (API 4.7.0, Oberfläche 1.5.0), Stufe 3 und 4 warten auf die
-Entscheidungen unter „Offene Fragen“.
+Stand: 18.11.2026. Alle vier Stufen sind umgesetzt (API 4.8.0, Oberfläche 1.6.0); Details zu Faktoren und
+jährlicher Aktualisierung in der API-README, Abschnitt „Schätzungen“.
 
 ## Ausgangslage
 
@@ -124,9 +124,12 @@ Wie beim Parsen liegt die Berechnung auf dem Server, die Oberfläche stellt nur 
 
 Stufe 1 und 2 sind risikoarm, weil sie nur vorhandene Angaben neu bezieht. Ab Stufe 3 braucht es Entscheidungen.
 
-## Offene Fragen
+## Entscheidungen (18.11.2026)
 
-- Welche Emissionsfaktor-Quellen sind für das Projekt akzeptabel?
-- Sollen Schätzungen standardmäßig aus- oder eingeschaltet sein?
-- Welche Voreinstellungen für Lebensdauer und Betriebsstunden (je Produktklasse aus der Klassifikation in
-  Technical Data, z. B. ECLASS, oder ein einheitlicher Wert)?
+- Faktoren nur aus vertrauenswürdigen Quellen mit jährlicher, zitierbarer Neuausgabe: DESNZ-Umrechnungsfaktoren
+  (Material, Entsorgung, Transport) und EEA-Treibhausgasintensität der Stromerzeugung je Land.
+- Schätzungen sind standardmäßig eingeblendet, schraffiert statt flächig dargestellt und abschaltbar.
+- Voreinstellungen je Produktklasse aus der ECLASS-Klassifikation in Technical Data (ersatzweise ESPR-Kategorie),
+  mit Angabe der Herkunft jedes Werts. Nutzungsdauern aus der AfA-Tabelle AV (keine jährliche Neuausgabe),
+  Betriebsstunden als gekennzeichnete Annahme.
+- A4 wird nur mit einer vom Nutzer angegebenen Entfernung geschätzt, weil der Zielort in den Daten fehlt.

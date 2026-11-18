@@ -19,7 +19,8 @@ import {
   CubeIcon,
   CubeTransparentIcon,
   PuzzlePieceIcon,
-  ArrowPathIcon
+  ArrowPathIcon,
+  CalculatorIcon
 } from '@heroicons/vue/24/outline'
 import InfoBox from '@/components/InfoBox.vue'
 import { storageRef } from '@/lib/storage'
@@ -64,7 +65,7 @@ const showSimulation = computed(() => info.value?.carbonTree?.hasChanges && rout
       <button class="absolute right-2 top-3" :title="expandTabs ? 'Collapse' : 'Expand'" @click="expandTabs = !expandTabs"><ChevronDoubleRightIcon class="w-4" v-if="!expandTabs" /><ChevronDoubleLeftIcon class="w-4" v-else /></button>
       <div class="page-tabs-container" v-if="info">
         <router-link
-          class="page-tab h-1/4"
+          class="page-tab h-1/5"
           :class="{'active': route.name === 'visualization.single'}"
           :to="{ name: 'visualization.single', params: { asset: route.params.asset } }"
         >
@@ -80,7 +81,7 @@ const showSimulation = computed(() => info.value?.carbonTree?.hasChanges && rout
         </router-link>
         <router-link
           :to="{ name: 'visualization.single.components', params: { asset: route.params.asset } }"
-          class="page-tab h-1/4"
+          class="page-tab h-1/5"
           :class="{'active': route.name === 'visualization.single.components'}"
         >
           <div class="page-tab-container">
@@ -94,8 +95,23 @@ const showSimulation = computed(() => info.value?.carbonTree?.hasChanges && rout
           </div>
         </router-link>
         <router-link
+          :to="{ name: 'visualization.single.estimates', params: { asset: route.params.asset } }"
+          class="page-tab h-1/5"
+          :class="{'active': route.name === 'visualization.single.estimates'}"
+        >
+          <div class="page-tab-container">
+            <CalculatorIcon class="h-10 mx-auto mb-2 min-h-6 text-base-content" />
+            <div class="text-base-content">
+              <strong>Estimates</strong>
+              <div :class="{'hidden': !expandTabs}">
+                Which emissions are missing in the declared data? Estimated from mass, power and product class.
+              </div>
+            </div>
+          </div>
+        </router-link>
+        <router-link
           :to="{ name: 'visualization.single.lifecycle', params: { asset: route.params.asset } }"
-          class="page-tab h-1/4"
+          class="page-tab h-1/5"
           :class="{'active': route.name === 'visualization.single.lifecycle'}"
         >
           <div class="page-tab-container">
@@ -110,7 +126,7 @@ const showSimulation = computed(() => info.value?.carbonTree?.hasChanges && rout
         </router-link>
         <router-link
           :to="{ name: 'visualization.single.simulation', params: { asset: route.params.asset } }"
-          class="page-tab h-1/4"
+          class="page-tab h-1/5"
           :class="{'active': route.name === 'visualization.single.simulation'}"
         >
           <div class="page-tab-container">

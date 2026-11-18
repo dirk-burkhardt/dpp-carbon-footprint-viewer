@@ -1,0 +1,264 @@
+{
+  "generated": "2026-11-18",
+  "sources": {
+    "desnz-2026": {
+      "title": "UK Government GHG Conversion Factors for Company Reporting 2026",
+      "publisher": "Department for Energy Security and Net Zero (DESNZ)",
+      "edition": 2026,
+      "updated": "annually (June)",
+      "license": "Open Government Licence v3.0",
+      "url": "https://www.gov.uk/government/collections/government-conversion-factors-for-company-reporting",
+      "file": "ghg-conversion-factors-2026-flat-format-revised.xlsx"
+    },
+    "eea-electricity-2024": {
+      "title": "Greenhouse gas emission intensity of electricity generation, country level",
+      "publisher": "European Environment Agency (EEA)",
+      "edition": 2024,
+      "updated": "annually",
+      "license": "CC BY 4.0",
+      "url": "https://www.eea.europa.eu/en/analysis/indicators/greenhouse-gas-emission-intensity-of-1-1783671782/greenhouse-gas-emission-intensity-of-electricity-generation",
+      "file": "eea-electricity-ghg-intensity-country-level.csv"
+    }
+  },
+  "electricity": {
+    "year": 2024,
+    "unit": "kg CO2e/kWh",
+    "source": "eea-electricity-2024",
+    "note": "GHG emission intensity of gross electricity generation; EU = average of EU-27",
+    "countries": {
+      "AT": 0.055,
+      "BE": 0.145,
+      "BG": 0.301,
+      "CY": 0.535,
+      "CZ": 0.332,
+      "DE": 0.298,
+      "DK": 0.076,
+      "EE": 0.585,
+      "ES": 0.129,
+      "EU": 0.18708,
+      "FI": 0.037,
+      "FR": 0.043,
+      "GR": 0.285,
+      "HR": 0.141,
+      "HU": 0.137,
+      "IE": 0.238,
+      "IT": 0.18,
+      "LT": 0.029,
+      "LU": 0.037,
+      "LV": 0.082,
+      "MT": 0.337,
+      "NL": 0.235,
+      "PL": 0.554,
+      "PT": 0.072,
+      "RO": 0.296,
+      "SE": 0.007,
+      "SI": 0.172,
+      "SK": 0.075
+    }
+  },
+  "freight": {
+    "road": {
+      "label": "Truck (HGV, average load)",
+      "kgCo2ePerTonneKm": 0.10356,
+      "source": "desnz-2026",
+      "reference": "Freighting goods › HGV (non-refrigerated, all diesel) › Average non-refrigerated HGVs › Average laden (ID 27_304_3140_14_1)"
+    },
+    "van": {
+      "label": "Van (up to 3.5 t)",
+      "kgCo2ePerTonneKm": 0.63511,
+      "source": "desnz-2026",
+      "reference": "Freighting goods › Vans › Average (up to 3.5 tonnes) › Diesel (ID 27_303_3102_14_1)"
+    },
+    "rail": {
+      "label": "Freight train",
+      "kgCo2ePerTonneKm": 0.02583,
+      "source": "desnz-2026",
+      "reference": "Freighting goods › Rail › Freight train (ID 27_315_3151_14_1)"
+    },
+    "sea": {
+      "label": "Container ship",
+      "kgCo2ePerTonneKm": 0.01612,
+      "source": "desnz-2026",
+      "reference": "Freighting goods › Cargo ship › Container ship › Average (ID 27_320_3235_14_1)"
+    },
+    "air": {
+      "label": "Air freight (international, incl. radiative forcing)",
+      "kgCo2ePerTonneKm": 0.89939,
+      "source": "desnz-2026",
+      "reference": "Freighting goods › Freight flights › International, to/from non-UK › With RF (ID 27_317_3158_14_1)"
+    }
+  },
+  "materials": {
+    "electrical-small": {
+      "label": "Electrical items - small",
+      "productionKgCo2ePerKg": 5.647946,
+      "productionReference": "Material use › Electrical items › Electrical items - small › Primary material production (ID 19_503_5088_15_1)",
+      "endOfLifeRoute": "Open-loop",
+      "endOfLifeKgCo2ePerKg": 0.004654,
+      "endOfLifeReference": "Waste disposal › Electrical items › WEEE - small › Open-loop (ID 20_503_5337_15_1)",
+      "source": "desnz-2026"
+    },
+    "electrical-large": {
+      "label": "Electrical items - large",
+      "productionKgCo2ePerKg": 3.267,
+      "productionReference": "Material use › Electrical items › Electrical items - large › Primary material production (ID 19_503_5080_15_1)",
+      "endOfLifeRoute": "Open-loop",
+      "endOfLifeKgCo2ePerKg": 0.004654,
+      "endOfLifeReference": "Waste disposal › Electrical items › WEEE - large › Open-loop (ID 20_503_5323_15_1)",
+      "source": "desnz-2026"
+    },
+    "electrical-it": {
+      "label": "Electrical items - IT",
+      "productionKgCo2ePerKg": 24.865476,
+      "productionReference": "Material use › Electrical items › Electrical items - IT › Primary material production (ID 19_503_5084_15_1)",
+      "endOfLifeRoute": "Open-loop",
+      "endOfLifeKgCo2ePerKg": 0.004654,
+      "endOfLifeReference": "Waste disposal › Electrical items › WEEE - mixed › Open-loop (ID 20_503_5330_15_1)",
+      "source": "desnz-2026"
+    },
+    "battery-li-ion": {
+      "label": "Batteries - Li ion",
+      "productionKgCo2ePerKg": 6.308,
+      "productionReference": "Material use › Electrical items › Batteries - Li ion › Primary material production (ID 19_503_5096_15_1)",
+      "endOfLifeRoute": "Open-loop",
+      "endOfLifeKgCo2ePerKg": 0.004654,
+      "endOfLifeReference": "Waste disposal › Electrical items › Batteries › Open-loop (ID 20_503_5344_15_1)",
+      "source": "desnz-2026"
+    },
+    "aluminium": {
+      "label": "Metal: aluminium cans and foil (excl. forming)",
+      "productionKgCo2ePerKg": 9.113583,
+      "productionReference": "Material use › Metal › Metal: aluminium cans and foil (excl. forming) › Primary material production (ID 19_504_5104_15_1)",
+      "endOfLifeRoute": "Closed-loop",
+      "endOfLifeKgCo2ePerKg": 0.004654,
+      "endOfLifeReference": "Waste disposal › Metal › Metal: aluminium cans and foil (excl. forming) › Closed-loop (ID 20_504_5352_15_1)",
+      "source": "desnz-2026"
+    },
+    "steel": {
+      "label": "Metal: steel cans",
+      "productionKgCo2ePerKg": 2.861583,
+      "productionReference": "Material use › Metal › Metal: steel cans › Primary material production (ID 19_504_5116_15_1)",
+      "endOfLifeRoute": "Closed-loop",
+      "endOfLifeKgCo2ePerKg": 0.004654,
+      "endOfLifeReference": "Waste disposal › Metal › Metal: steel cans › Closed-loop (ID 20_504_5373_15_1)",
+      "source": "desnz-2026"
+    },
+    "metal-mixed": {
+      "label": "Metals",
+      "productionKgCo2ePerKg": 3.821949,
+      "productionReference": "Material use › Construction › Metals › Primary material production (ID 19_500_5028_15_1)",
+      "endOfLifeRoute": "Closed-loop",
+      "endOfLifeKgCo2ePerKg": 0.001014,
+      "endOfLifeReference": "Waste disposal › Construction › Metals › Closed-loop (ID 20_500_5219_15_1)",
+      "source": "desnz-2026"
+    },
+    "scrap-metal": {
+      "label": "Metal: scrap metal",
+      "productionKgCo2ePerKg": 3.470911,
+      "productionReference": "Material use › Metal › Metal: scrap metal › Primary material production (ID 19_504_5112_15_1)",
+      "endOfLifeRoute": "Closed-loop",
+      "endOfLifeKgCo2ePerKg": 0.004654,
+      "endOfLifeReference": "Waste disposal › Metal › Metal: scrap metal › Closed-loop (ID 20_504_5366_15_1)",
+      "source": "desnz-2026"
+    },
+    "plastics": {
+      "label": "Plastics: average plastics",
+      "productionKgCo2ePerKg": 3.170507,
+      "productionReference": "Material use › Plastic › Plastics: average plastics › Primary material production (ID 19_505_5120_15_1)",
+      "endOfLifeRoute": "Combustion",
+      "endOfLifeKgCo2ePerKg": 0.004654,
+      "endOfLifeReference": "Waste disposal › Plastic › Plastics: average plastics › Combustion (ID 20_505_5381_15_1)",
+      "source": "desnz-2026"
+    },
+    "plastics-pp": {
+      "label": "Plastics: PP (incl. forming)",
+      "productionKgCo2ePerKg": 2.575253,
+      "productionReference": "Material use › Plastic › Plastics: PP (incl. forming) › Primary material production (ID 19_505_5144_15_1)",
+      "endOfLifeRoute": "Combustion",
+      "endOfLifeKgCo2ePerKg": 0.004654,
+      "endOfLifeReference": "Waste disposal › Plastic › Plastics: PP (incl. forming) › Combustion (ID 20_505_5423_15_1)",
+      "source": "desnz-2026"
+    },
+    "plastics-pvc": {
+      "label": "Plastics: PVC (incl. forming)",
+      "productionKgCo2ePerKg": 2.942437,
+      "productionReference": "Material use › Plastic › Plastics: PVC (incl. forming) › Primary material production (ID 19_505_5152_15_1)",
+      "endOfLifeRoute": "Combustion",
+      "endOfLifeKgCo2ePerKg": 0.004654,
+      "endOfLifeReference": "Waste disposal › Plastic › Plastics: PVC (incl. forming) › Combustion (ID 20_505_5437_15_1)",
+      "source": "desnz-2026"
+    },
+    "plastics-pet": {
+      "label": "Plastics: PET (incl. forming)",
+      "productionKgCo2ePerKg": 3.861583,
+      "productionReference": "Material use › Plastic › Plastics: PET (incl. forming) › Primary material production (ID 19_505_5140_15_1)",
+      "endOfLifeRoute": "Combustion",
+      "endOfLifeKgCo2ePerKg": 0.004654,
+      "endOfLifeReference": "Waste disposal › Plastic › Plastics: PET (incl. forming) › Combustion (ID 20_505_5416_15_1)",
+      "source": "desnz-2026"
+    },
+    "plastics-hdpe": {
+      "label": "Plastics: HDPE (incl. forming)",
+      "productionKgCo2ePerKg": 3.092893,
+      "productionReference": "Material use › Plastic › Plastics: HDPE (incl. forming) › Primary material production (ID 19_505_5132_15_1)",
+      "endOfLifeRoute": "Combustion",
+      "endOfLifeKgCo2ePerKg": 0.004654,
+      "endOfLifeReference": "Waste disposal › Plastic › Plastics: HDPE (incl. forming) › Combustion (ID 20_505_5402_15_1)",
+      "source": "desnz-2026"
+    },
+    "plastics-ps": {
+      "label": "Plastics: PS (incl. forming)",
+      "productionKgCo2ePerKg": 4.374387,
+      "productionReference": "Material use › Plastic › Plastics: PS (incl. forming) › Primary material production (ID 19_505_5148_15_1)",
+      "endOfLifeRoute": "Combustion",
+      "endOfLifeKgCo2ePerKg": 0.004654,
+      "endOfLifeReference": "Waste disposal › Plastic › Plastics: PS (incl. forming) › Combustion (ID 20_505_5430_15_1)",
+      "source": "desnz-2026"
+    },
+    "glass": {
+      "label": "Glass",
+      "productionKgCo2ePerKg": 1.402767,
+      "productionReference": "Material use › Other › Glass › Primary material production (ID 19_501_5056_15_1)",
+      "endOfLifeRoute": "Closed-loop",
+      "endOfLifeKgCo2ePerKg": 0.004654,
+      "endOfLifeReference": "Waste disposal › Other › Glass › Closed-loop (ID 20_501_5268_15_1)",
+      "source": "desnz-2026"
+    },
+    "paper": {
+      "label": "Paper and board: mixed",
+      "productionKgCo2ePerKg": 1.287017,
+      "productionReference": "Material use › Paper › Paper and board: mixed › Primary material production (ID 19_506_5160_15_1)",
+      "endOfLifeRoute": "Closed-loop",
+      "endOfLifeKgCo2ePerKg": 0.004654,
+      "endOfLifeReference": "Waste disposal › Paper › Paper and board: mixed › Closed-loop (ID 20_506_5450_15_1)",
+      "source": "desnz-2026"
+    },
+    "wood": {
+      "label": "Wood",
+      "productionKgCo2ePerKg": 0.269504,
+      "productionReference": "Material use › Construction › Wood › Primary material production (ID 19_500_5048_15_1)",
+      "endOfLifeRoute": "Combustion",
+      "endOfLifeKgCo2ePerKg": 0.004654,
+      "endOfLifeReference": "Waste disposal › Construction › Wood › Combustion (ID 20_500_5255_15_1)",
+      "source": "desnz-2026"
+    },
+    "textiles": {
+      "label": "Clothing",
+      "productionKgCo2ePerKg": 22.31,
+      "productionReference": "Material use › Other › Clothing › Primary material production (ID 19_501_5060_15_1)",
+      "endOfLifeRoute": "Combustion",
+      "endOfLifeKgCo2ePerKg": 0.004654,
+      "endOfLifeReference": "Waste disposal › Other › Clothing › Combustion (ID 20_501_5276_15_1)",
+      "source": "desnz-2026"
+    },
+    "rubber": {
+      "label": "Tyres",
+      "productionKgCo2ePerKg": 3.335572,
+      "productionReference": "Material use › Construction › Tyres › Primary material production (ID 19_500_5044_15_1)",
+      "endOfLifeRoute": "Landfill",
+      "endOfLifeKgCo2ePerKg": null,
+      "endOfLifeReference": "Waste disposal › Construction › Tyres › Landfill (ID 20_500_5250_15_1)",
+      "source": "desnz-2026"
+    }
+  }
+}

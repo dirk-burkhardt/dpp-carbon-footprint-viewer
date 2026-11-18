@@ -9,8 +9,13 @@ import HelpModal from '@/components/HelpModal.vue'
 import { ArrowDownIcon } from '@heroicons/vue/24/outline'
 import TransportCarbonFootprintPlot from '@/components/TransportCarbonFootprintPlot.vue'
 import DualLifeCyclePlot from '@/components/DualLifeCyclePlot.vue'
+import DeclaredAndEstimatedPhases from '@/components/DeclaredAndEstimatedPhases.vue'
+import { computed } from 'vue'
+import { showEstimates, useEstimates } from '@/lib/estimates'
 
-defineProps<{ info: Awaited<ReturnType<typeof loadFullAssetInfo>>}>()
+const props = defineProps<{ info: Awaited<ReturnType<typeof loadFullAssetInfo>>}>()
+
+const { estimates } = useEstimates(computed(() => props.info.asset.id))
 
 </script>
 <template>
@@ -51,6 +56,27 @@ defineProps<{ info: Awaited<ReturnType<typeof loadFullAssetInfo>>}>()
           </HelpModal>
         </h2>
         <DualLifeCyclePlot :carbon-tree="info.carbonTree" :carbon-footprint="info.carbonFootprint" v-if="info.carbonTree || info.carbonFootprint" />
+      </div>
+    </div>
+    <div class="card bg-base-100">
+      <div class="card-body">
+        <h2 class="card-title flex-wrap">
+          <span class="grow">Declared and Estimated Emissions per Phase</span>
+          <label class="flex items-center gap-2 text-sm font-normal cursor-pointer">
+            <input v-model="showEstimates" type="checkbox" class="toggle toggle-sm" />
+            Show estimates
+          </label>
+        </h2>
+        <p class="text-sm mb-2">
+          Phases without declared data are estimated from the data of the asset and published emission factors.
+          Assumptions, formulas and sources are listed under
+          <router-link class="link" :to="{ name: 'visualization.single.estimates', params: { asset: $route.params.asset } }">Estimates</router-link>.
+        </p>
+        <DeclaredAndEstimatedPhases
+          :carbon="info.carbonTree ?? info.carbonFootprint"
+          :estimates="estimates"
+          :show-estimates="showEstimates"
+        />
       </div>
     </div>
     <div class="card bg-base-100" v-if="info.carbonTree">

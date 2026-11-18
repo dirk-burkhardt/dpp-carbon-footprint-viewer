@@ -72,6 +72,7 @@ Vorrang.
 | `GET /api/v4/products/{id}/nameplate` | Hersteller und Adresse aus dem Typenschild |
 | `GET /api/v4/products/{id}/technical-data` | Technische Daten mit Namen, Einheiten und Definitionen aus den ConceptDescriptions |
 | `GET /api/v4/products/{id}/indicators` | Bezugsgrößen aus Technical Data in SI-Einheiten (Masse in kg, Leistung in W, Lebensdauer in Jahren, Maße in m, Volumen) mit Fundstelle, außerdem Materialangaben; erkennt ECLASS-IDs, übliche Namen und Einheiten im Wert (`"2,250 g"`) |
+| `GET /api/v4/products/{id}/estimates` | Schätzungen für Lebenszyklusphasen ohne deklarierten Footprint (siehe unten), Parameter `country`, `lifetimeYears`, `hoursPerYear`, `transportKm`, `transportMode` |
 | `GET /api/v4/products/{id}/documentation` | Dokumente aus Handover Documentation / VDI 2770 |
 | `GET /api/v4/products/{id}/maintenance` | Wartungsintervalle, -schritte, Werkzeuge, Verbrauchsmaterial, Ersatzteile |
 | `GET /api/v4/products/{id}/details` | Alles zusammen: Templates, Typenschild, technische Daten, Dokumente, Wartung |
@@ -137,6 +138,35 @@ Versionen auf GitHub, auch neue Releases von Metamodell und AASX-Format, findet
   geladen; beschädigte Dateien werden protokolliert und übersprungen.
 - Doppelte ZIP-Einträge: der letzte gewinnt. Doppelte Submodel-ID bei einer Shell: das Duplikat wird übersprungen.
 - Elemente ohne `idShort` werden bei der Pfadsuche übersprungen.
+
+## Schätzungen
+
+`/products/{id}/estimates` schätzt Emissionen für Lebenszyklusphasen, die kein deklarierter Footprint abdeckt.
+Deklarierte Werte werden nie verändert oder doppelt gezählt; jede Schätzung nennt Formel, Eingangswerte und deren
+Herkunft (Schale, Produktklasse, allgemeine Annahme oder Vorgabe des Nutzers) sowie die Quelle jedes Faktors.
+
+| Phase | Schätzung | Faktor |
+|---|---|---|
+| A1-A3 Herstellung | Masse × Herstellungsfaktor der Materialgruppe; nur ohne deklarierten Product Footprint, sonst Plausibilitätsprüfung (Abweichung über Faktor 3) | DESNZ „Material use“ |
+| A4 Transport zum Kunden | Masse × Entfernung × Faktor des Verkehrsträgers; Entfernung gibt der Nutzer vor | DESNZ „Freighting goods“ |
+| B6 Energie in der Nutzung | Leistung × Betriebsstunden pro Jahr × Nutzungsdauer × Strommix des Landes | EEA, Treibhausgasintensität der Stromerzeugung |
+| C1-C4 Entsorgung | Masse × Entsorgungsfaktor der Materialgruppe (ohne Gutschriften für Recycling) | DESNZ „Waste disposal“ |
+
+Masse, Leistung und Materialien kommen aus Technical Data (`/indicators`). Produktklasse (ECLASS-Segment oder
+ESPR-Produktkategorie), Nutzungsdauer, Betriebsstunden und Materialgruppe je Klasse stehen in
+`src/carbon_footprint_api/estimates/classes.json`: Nutzungsdauern aus der AfA-Tabelle AV des BMF, Betriebsstunden
+als gekennzeichnete Annahme (Ein- oder Zweischichtbetrieb). Ohne erkannte Klasse gilt der Median der AfA-Tabelle.
+
+**Jährliche Aktualisierung der Faktoren** (DESNZ erscheint jeweils im Juni, EEA einmal im Jahr):
+
+1. Neue Ausgaben nach `factor-sources/` laden: DESNZ „Greenhouse gas reporting: conversion factors <Jahr>“,
+   *flat file* (xlsx), von der
+   [DESNZ-Seite](https://www.gov.uk/government/collections/government-conversion-factors-for-company-reporting),
+   und auf der [EEA-Seite](https://www.eea.europa.eu/en/analysis/indicators/greenhouse-gas-emission-intensity-of-1-1783671782/greenhouse-gas-emission-intensity-of-electricity-generation)
+   die Diagrammdaten als CSV (Dateiname `eea-electricity-….csv`). Ältere Dateien entfernen.
+2. `python tools/update_factors.py` schreibt `src/carbon_footprint_api/estimates/factors.json` und gibt die
+   übernommenen Faktoren aus.
+3. Tests ausführen, API-Version erhöhen (`patch`).
 
 ## Aufbau
 

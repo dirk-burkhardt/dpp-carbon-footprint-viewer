@@ -8,12 +8,17 @@ import { grams, percent } from '@/lib/util'
 import { describeSource, type ApiIndicators } from '@/lib/api/products'
 import { analyzeStructure, intensity } from '@/lib/keyFigures'
 import type CarbonTree from '@/lib/model/CarbonTree'
+import { showEstimates, useEstimates } from '@/lib/estimates'
 
 const props = defineProps<{
+  assetId: string
   totalCo2eq: number | undefined
   indicators: ApiIndicators | null
   carbonTree?: CarbonTree
 }>()
+
+const { estimates } = useEstimates(computed(() => props.assetId))
+const estimatedPhases = computed(() => estimates.value?.phases.filter((p) => p.status === 'estimated') ?? [])
 
 const mass = computed(() => props.indicators?.mass ?? undefined)
 const power = computed(() => props.indicators?.power ?? undefined)
@@ -57,6 +62,19 @@ function formatMass(kg: number) {
         <div class="key-figure-note">{{ power ? 'no carbon footprint data' : 'no power consumption in Technical Data' }}</div>
       </template>
     </div>
+
+    <router-link
+      v-if="showEstimates && estimatedPhases.length"
+      :to="{ name: 'visualization.single.estimates', params: { asset: $route.params.asset } }"
+      class="key-figure hover:bg-base-200/60"
+      title="Phases without declared data, estimated from the data of the asset and published emission factors"
+    >
+      <div class="key-figure-label flex items-center gap-2">
+        <span class="inline-block w-4 h-3 estimate-fill"></span>Estimated, not declared
+      </div>
+      <div class="key-figure-value">{{ grams(estimates!.estimatedCo2eq, 'kg') }}</div>
+      <div class="key-figure-note">{{ estimatedPhases.map((p) => p.phase).join(', ') }}, see Estimates</div>
+    </router-link>
 
     <template v-if="structure">
       <div

@@ -197,3 +197,81 @@ export function describeSource(measure: ApiMeasure): string {
     .join(' ')
   return `Technical Data: ${[...source.path, name].join(' › ')} = ${given}`
 }
+
+export type ApiEstimateValue = {
+  name: string
+  value: number
+  unit: string
+  /** file: from the shell; class: default of the product class; assumption: general default; user: set by the user */
+  origin: 'file' | 'class' | 'assumption' | 'user' | 'factor'
+  source?: string | null
+  reference?: string | null
+}
+
+export type ApiPhaseEstimate = {
+  phase: string
+  label: string
+  status: 'estimated' | 'declared' | 'missing'
+  co2eq?: number | null
+  formula?: string | null
+  inputs: ApiEstimateValue[]
+  reason?: string | null
+}
+
+export type ApiSourceInfo = {
+  key: string
+  title: string
+  publisher: string
+  edition?: string | null
+  updated?: string | null
+  license?: string | null
+  url?: string | null
+}
+
+export type ApiEstimates = {
+  productClass: { system?: string | null, classId?: string | null, label: string, matchedBy?: string | null }
+  material?: ApiEstimateValue | null
+  phases: ApiPhaseEstimate[]
+  estimatedCo2eq: number
+  plausibility?: {
+    declaredCo2eq: number
+    estimatedCo2eq: number
+    ratio: number
+    assessment: 'plausible' | 'low' | 'high'
+    note: string
+  } | null
+  countries: string[]
+  transportModes: Record<string, string>
+  sources: ApiSourceInfo[]
+  warnings: string[]
+}
+
+export type EstimateQuery = {
+  country: string
+  lifetimeYears?: number
+  hoursPerYear?: number
+  transportKm?: number
+  transportMode: string
+}
+
+const estimateCache = new Map<string, Promise<ApiEstimates | null>>()
+
+/** Estimates for life cycle phases without declared footprint, null if the API does not offer them. Cached. */
+export function fetchEstimates(aasIdentifier: string, query: EstimateQuery): Promise<ApiEstimates | null> {
+  const params = new URLSearchParams()
+  for (const [key, value] of Object.entries(query)) {
+    if (value !== undefined && value !== null && value !== '') {
+      params.set(key, String(value))
+    }
+  }
+  const url = `${apiConfig.assetAdministrationShellRepositoryUrl.replace(/\/+$/, '')}/products/${encodeId(aasIdentifier)}/estimates?${params}`
+  let result = estimateCache.get(url)
+  if (!result) {
+    result = fetch(url)
+      .then((response) => (response.ok ? (response.json() as Promise<ApiEstimates>) : null))
+      .catch(() => null)
+    estimateCache.set(url, result)
+    result.then((r) => r ?? estimateCache.delete(url))
+  }
+  return result
+}

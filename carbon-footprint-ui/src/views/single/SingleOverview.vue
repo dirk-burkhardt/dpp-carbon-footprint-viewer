@@ -95,8 +95,8 @@ const lifeCyclePhases = computed(() => {
       Product or Transport Carbon Footprint data not available.
     </div>
     <KeyFigures
-      v-else
       class="col-span-6"
+      :asset-id="info.asset.id"
       :total-co2eq="co2eq.total"
       :indicators="info.indicators"
       :carbon-tree="info.carbonTree"
