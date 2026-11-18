@@ -82,14 +82,18 @@ function remember(upload: Upload): Upload {
   return upload
 }
 
+let limitsRequest: Promise<UploadLimits | null> | undefined
+
+/** Limits as reported by the API (also when uploads are disabled), null if the API has no such endpoint. */
+export function fetchRawUploadLimits(): Promise<UploadLimits | null> {
+  limitsRequest ??= request<UploadLimits>('/uploads').catch(() => null)
+  return limitsRequest
+}
+
 /** Maximum size and retention of uploads, null if the API offers no uploads. */
 export async function fetchUploadLimits(): Promise<UploadLimits | null> {
-  try {
-    const limits = await request<UploadLimits>('/uploads')
-    return limits.enabled ? limits : null
-  } catch {
-    return null
-  }
+  const limits = await fetchRawUploadLimits()
+  return limits?.enabled ? limits : null
 }
 
 export async function uploadFile(file: File): Promise<Upload> {

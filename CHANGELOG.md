@@ -4,6 +4,13 @@ Changelog des Gesamtprojekts. Einträge nach Datum, je Zeile der Teil mit seiner
 
 ## 2026-11-18
 
+- UI 1.4.0: Über Links geladene und hochgeladene Dateien bleiben im Browser unter External assets gelistet, auch nach dem Wechsel zur Übersicht oder einem Neuladen, bis sie nach der Zeit des Servers ablaufen oder entfernt werden
+- API 4.6.0: Über Links geladene Dateien werden nach `CFA_UPLOAD_TTL_HOURS` verworfen und beim nächsten Abruf neu geladen
+- API 4.6.0: Option `--uploadDir`
+- UI 1.4.0: Carbon Footprints kommen aus dem normalisierten Endpunkt der API (`/products/{id}/carbon-footprint`) statt aus eigener Auswertung der Submodelle; damit werden alle Versionen des Templates angezeigt (bisher nur die Struktur von 0.9, Footprints nach 1.0 erschienen mit „carbon footprint provided“, aber ohne Werte). Ohne diesen Endpunkt (fremder AAS-Server) wird wie bisher selbst ausgewertet; Warnungen der API erscheinen mit Asset und Element in der Fehlertabelle
+- Konzept `docs/strategie-technical-data-und-hierarchie.md`: Einbindung von Technical Data und Hierarchical Structures in die CO2-Darstellung
+- `docker-compose.yml`: `repo/uploads` als einziger beschreibbarer Ordner des API-Containers
+- API 4.6.0: Uploads werden mit CFA_UPLOAD_DIR in einem Ordner abgelegt (im Container repo/uploads, getrennt vom statischen Bestand), Anhänge werden aus der Datei gelesen; beim Start werden frühere Uploads dort gelöscht, andere Dateien bleiben unberührt; ist der Ordner nicht beschreibbar, bleiben Uploads im Arbeitsspeicher
 - API 4.5.0: Temporäres Hochladen von AAS(X)-Dateien unter `/uploads` (`POST`, `GET`, `DELETE`): nur im Arbeitsspeicher, Größe über `CFA_UPLOAD_MAX_MB` (Standard 25 MB), gelöscht nach `CFA_UPLOAD_TTL_HOURS` (Standard 3 h), bei mehr als `CFA_UPLOAD_MAX_COUNT` Uploads (Standard 20) und bei jedem Neustart; zufällige Upload-IDs, hochgeladene Shells ersetzen nie vorhandene
 - API 4.5.0: Heruntergeladene und hochgeladene Shells teilen sich eine Verwaltung, eine Shell wird erst entfernt, wenn keine Quelle sie mehr nutzt
 - API 4.5.0: CORS erlaubt zusätzlich `POST` und `DELETE` (für Uploads)

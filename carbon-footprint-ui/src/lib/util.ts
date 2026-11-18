@@ -11,7 +11,7 @@ import CarbonTree, { type SimulationChanges } from '@/lib/model/CarbonTree'
 import CarbonData from '@/lib/model/CarbonData'
 import { toDescriptionSmall } from '@/lib/api/registry'
 import type { ShellDescriptionSmallInterface } from '@/lib/api/shellTypes'
-import CarbonFootprint from '@/lib/model/CarbonFootprint'
+import CarbonFootprint, { loadCarbonFootprintData } from '@/lib/model/CarbonFootprint'
 import { IRI } from '@/lib/model/semanticIds'
 import { encodeBase64 } from '@/lib/encoding'
 
@@ -316,7 +316,8 @@ export async function loadFullAssetInfo(aasIdentifierOrUrl: string, idMap?: Asse
   // const cf = submodels.oneOrUndefined([IRI.CARBON_FOOTPRINT['0/9'], IRI.CARBON_FOOTPRINT['1/0']], "CarbonFootprint");
   let carbonFootprint;
   try {
-    carbonFootprint = cfs.length ? CarbonFootprint.fromIdTree(cfs, description?.idShort || description?.name) : undefined;
+    const data = await loadCarbonFootprintData(asset.id, () => cfs, description?.idShort || description?.name);
+    carbonFootprint = data ? new CarbonFootprint(data) : undefined;
   } catch (err) {
     console.warn(err, onWarning);
     onWarning(

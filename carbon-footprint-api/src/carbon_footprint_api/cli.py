@@ -63,6 +63,11 @@ def _parser() -> argparse.ArgumentParser:
     p.add_argument(
         "--uploadTtlHours", dest="upload_ttl_hours", type=float, help="Hours after which an upload is deleted"
     )
+    p.add_argument(
+        "--uploadDir",
+        dest="upload_dir",
+        help="Directory for uploaded files, e.g. ../repo/uploads (default: keep uploads in memory only)",
+    )
     return p
 
 

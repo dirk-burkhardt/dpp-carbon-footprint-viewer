@@ -39,6 +39,7 @@ def create_app(settings: Optional[Settings] = None, repository: Optional[AssetRe
         ttl_seconds=settings.upload_ttl_seconds,
         max_uploads=settings.upload_max_count,
         leases=leases,
+        directory=settings.upload_dir,
     )
 
     @asynccontextmanager
@@ -48,7 +49,7 @@ def create_app(settings: Optional[Settings] = None, repository: Optional[AssetRe
             await anyio.to_thread.run_sync(lambda: repo.load_files(aas_files, aasx_files))
             logger.info("%d Shells geladen", repo.shell_count())
         async with anyio.create_task_group() as tasks:
-            tasks.start_soon(_purge_uploads_periodically, uploads)
+            tasks.start_soon(_purge_periodically, app)
             yield
             tasks.cancel_scope.cancel()
 
@@ -70,6 +71,7 @@ def create_app(settings: Optional[Settings] = None, repository: Optional[AssetRe
         max_cached=settings.external_max_cached,
         allow_private_networks=settings.external_allow_private_networks,
         leases=leases,
+        ttl_seconds=settings.upload_ttl_seconds,
     )
     app.state.upload_service = uploads
 
@@ -98,8 +100,9 @@ def create_app(settings: Optional[Settings] = None, repository: Optional[AssetRe
 UPLOAD_PURGE_INTERVAL_SECONDS = 60.0
 
 
-async def _purge_uploads_periodically(uploads: UploadService) -> None:
-    """Deletes expired uploads even if nobody accesses them (they are also purged on every access)."""
+async def _purge_periodically(app: FastAPI) -> None:
+    """Deletes expired uploads and downloads even if nobody accesses them (also done on every access)."""
     while True:
         await anyio.sleep(UPLOAD_PURGE_INTERVAL_SECONDS)
-        uploads.purge_expired()
+        await anyio.to_thread.run_sync(app.state.upload_service.purge_expired)
+        await app.state.external_service.purge_expired()

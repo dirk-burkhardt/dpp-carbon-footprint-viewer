@@ -9,6 +9,8 @@ Schutzmaßnahmen, weil hier der Server im Auftrag eines Clients beliebige Adress
 * Größen- und Zeitlimit, Proxy-Variablen der Umgebung werden ignoriert
 * heruntergeladene Shells sind versteckt, ersetzen nie vorhandene Shells und werden nach dem LRU-Prinzip
   wieder entfernt, damit der Speicher nicht unbegrenzt wächst
+* nach ``ttl_seconds`` (wie Uploads, ``CFA_UPLOAD_TTL_HOURS``) werden sie verworfen und beim nächsten Abruf neu
+  geladen
 """
 
 from __future__ import annotations
@@ -17,6 +19,7 @@ import asyncio
 import ipaddress
 import logging
 import socket
+import time
 from collections import OrderedDict
 from collections.abc import Awaitable, Callable
 from http import HTTPStatus
@@ -70,6 +73,8 @@ class ExternalShellService:
         transport: Optional[httpx2.AsyncBaseTransport] = None,
         resolver: Resolver = _resolve,
         leases: Optional[HiddenShellLeases] = None,
+        ttl_seconds: Optional[float] = None,
+        clock: Callable[[], float] = time.time,
     ) -> None:
         self._repository = repository
         # Shared with the upload service, so a shell contained in a download and an upload stays while one uses it
@@ -80,11 +85,15 @@ class ExternalShellService:
         self._allow_private = allow_private_networks
         self._transport = transport
         self._resolver = resolver
+        self._ttl = ttl_seconds
+        self._clock = clock
         self._cache: OrderedDict[str, list[str]] = OrderedDict()
+        self._loaded_at: dict[str, float] = {}
         self._lock = asyncio.Lock()
 
     async def load(self, url: str) -> Optional[list[AasObject]]:
         """Shells aus der Datei unter ``url``. ``None`` bedeutet: die Gegenstelle lieferte nicht 200."""
+        await self.purge_expired()
         async with self._lock:
             cached = self._cache.get(url)
             if cached is not None:
@@ -109,10 +118,25 @@ class ExternalShellService:
         async with self._lock:
             self._cache[url] = ids
             self._cache.move_to_end(url)
+            self._loaded_at[url] = self._clock()
             self._leases.acquire(f"url:{url}", ids)
             while len(self._cache) > self._max_cached:
                 evicted_url, _ = self._cache.popitem(last=False)
+                self._loaded_at.pop(evicted_url, None)
                 self._leases.release(f"url:{evicted_url}")
+
+    async def purge_expired(self) -> int:
+        """Forgets downloads older than the time to live; they are downloaded again on the next request."""
+        if self._ttl is None:
+            return 0
+        limit = self._clock() - self._ttl
+        async with self._lock:
+            expired = [url for url, loaded in self._loaded_at.items() if loaded <= limit]
+            for url in expired:
+                self._cache.pop(url, None)
+                del self._loaded_at[url]
+                self._leases.release(f"url:{url}")
+        return len(expired)
 
     async def _check_url(self, url: httpx2.URL) -> None:
         if url.scheme not in ("http", "https") or not url.host:

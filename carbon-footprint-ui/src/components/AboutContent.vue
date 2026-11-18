@@ -10,7 +10,7 @@
     <p>
       The tool is continued as <i>DPPviewer</i> by <b>Dirk Burkhardt</b> and the
       <a href="https://vis.h-da.de" target="_blank" rel="noopener noreferrer">VIS team</a> at the Darmstadt University
-      of Applied Sciences.
+      of Applied Sciences. The tool is available on <a href="https://github.com/dirk-burkhardt/dpp-carbon-footprint-viewer" target="_blank">GitHub</a>.
     </p>
     <h3>Version</h3>
     <table>

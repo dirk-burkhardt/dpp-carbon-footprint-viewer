@@ -12,8 +12,9 @@ A public version is running at: https://dppviewer.policymodelling.com
 |---|---|
 | [`carbon-footprint-api`](carbon-footprint-api/README.md) | REST-API (Python, FastAPI), liest AAS-/AASX-Dateien und stellt sie unter `/api/v4` bereit |
 | [`carbon-footprint-ui`](carbon-footprint-ui/README.md) | Oberfläche (Vue, TypeScript, Vite) |
-| `repo` | Beispiel- und Projektdateien (AASX), die die API beim Start lädt |
+| `repo` | Beispiel- und Projektdateien (AASX), die die API beim Start lädt; `repo/uploads` nimmt hochgeladene Dateien auf |
 | `tools` | Hilfsskripte für das Gesamtprojekt (Versionierung, Prüfung auf neue IDTA-Templates) |
+| `docs` | Konzepte, z. B. [Strategie für Technical Data und Hierarchical Structures](docs/strategie-technical-data-und-hierarchie.md) |
 
 Die aktuellen Versionen stehen im jeweiligen `CHANGELOG.md` und auf der About-Seite der Oberfläche.
 
@@ -23,13 +24,18 @@ Voraussetzungen: Docker mit Compose-Plugin (Docker Desktop unter Windows/macOS, 
 
 ```bash
 cp .env.example .env               # Windows: copy .env.example .env
+mkdir -p repo/uploads              # Ablage für hochgeladene Dateien
+sudo chown 10001 repo/uploads      # nur Linux: der API-Container läuft als Benutzer 10001
 docker compose up -d --build       # Images bauen und beide Container starten
 docker compose ps                  # Status, die API meldet sich nach einigen Sekunden als healthy
 docker compose logs -f             # Protokolle verfolgen (Strg+C beendet nur die Anzeige)
 docker compose down                # beenden
 ```
 
-Die API lädt die AASX-Dateien aus `repo` beim Start. Nach Änderungen dort genügt `docker compose restart api`,
+Die API lädt die AASX-Dateien aus `repo` beim Start (nur die Dateien direkt im Ordner, keine Unterordner).
+Hochgeladene Dateien legt sie in `repo/uploads` ab, getrennt vom statischen Bestand; sie werden nach
+`UPLOAD_TTL_HOURS` und bei jedem Neustart gelöscht. Ist der Ordner nicht beschreibbar, hält die API Uploads nur
+im Arbeitsspeicher und meldet das im Protokoll. Nach Änderungen dort genügt `docker compose restart api`,
 nach Änderungen am Quellcode `docker compose up -d --build`.
 
 In `.env` lassen sich anpassen (alle Angaben sind optional, siehe Kommentare in `.env.example`):
@@ -42,7 +48,7 @@ In `.env` lassen sich anpassen (alle Angaben sind optional, siehe Kommentare in 
 | `API_EXTERNAL_SHELLS_ENABLED` | `true` | Laden von AASX-Dateien über eine URL erlauben |
 | `UPLOADS_ENABLED` | `true` | Hochladen von AAS(X)-Dateien in der Oberfläche erlauben |
 | `UPLOAD_MAX_MB` | `25` | Maximale Größe einer hochgeladenen Datei in MB |
-| `UPLOAD_TTL_HOURS` | `3` | Stunden, nach denen hochgeladene Dateien gelöscht werden (spätestens beim Neustart der API) |
+| `UPLOAD_TTL_HOURS` | `3` | Stunden, nach denen hochgeladene und über Links geladene Dateien verworfen werden (Uploads spätestens beim Neustart der API) |
 | `MAP_TILE_URL`, `MAP_ATTRIBUTION`, `GEOCODING_URL` | leer | Kartenkacheln und Adresssuche, leer = OpenStreetMap/Nominatim, `GEOCODING_URL=off` schaltet die Adresssuche ab |
 
 Im Browser erreichbar (mit Standardport 5001):
@@ -69,7 +75,7 @@ cd carbon-footprint-api
 python -m venv .venv
 .venv\Scripts\activate            # Linux/macOS: source .venv/bin/activate
 pip install -e ".[dev]"
-python -m carbon_footprint_api --aasx "../repo/*.aasx"
+python -m carbon_footprint_api --aasx "../repo/*.aasx" --uploadDir ../repo/uploads
 
 # Terminal 2: Oberfläche
 cd carbon-footprint-ui

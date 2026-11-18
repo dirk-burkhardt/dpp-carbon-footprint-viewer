@@ -24,6 +24,7 @@ import {
   type UploadLimits,
   UploadRequestError,
 } from '@/lib/api/uploads'
+import { addExternalSource, removeExternalSource } from '@/lib/externalSources'
 import AssetGridCard from '@/components/AssetGridCard.vue'
 import FavoritesBox from '@/components/FavoritesBox.vue'
 import StatusIndicator from '@/components/layout/StatusIndicator.vue'
@@ -134,6 +135,7 @@ async function onFileSelected() {
     if (externalShells) {
       externalShells.value[url] = upload.shells;
     }
+    addExternalSource(url, Date.parse(upload.expiresAt));
     await router.push(updateQuery('preload', [...preload.value, encodeBase64(url)]));
   } catch (e) {
     if (e instanceof UploadRequestError && e.status === 413) {
@@ -152,8 +154,17 @@ async function onFileSelected() {
   }
 }
 
-// Removing an uploaded file also deletes it on the server
+// A link stays listed in this browser until it expires
+function onAddLink() {
+  if (externalUrl.value.trim()) {
+    addExternalSource(externalUrl.value);
+  }
+  externalUrl.value = '';
+}
+
+// Removing a source forgets it in this browser; an uploaded file is also deleted on the server
 function onRemoveExternal(url: string) {
+  removeExternalSource(url);
   if (isUploadUrl(url)) {
     deleteUpload(uploadIdFromUrl(url)).catch((e) => console.error(e));
   }
@@ -244,7 +255,7 @@ const shells = computed(() => (showExternal.value ? Object.values(externalAssets
                 class="btn btn-sm btn-primary p-2"
                 :disabled="externalUrl.length ? undefined : 'disabled'"
                 :to="updateQuery('preload', [...preload, encodeBase64(externalUrl)])"
-                @click="externalUrl = ''"
+                @click="onAddLink"
               >
                 Load external assets
               </router-link>

@@ -35,6 +35,12 @@ class HiddenShellLeases:
             # only_hidden: shells from the repository folder are never removed, even if a source contained them
             self._repository.remove_shells(orphaned, only_hidden=True)
 
+    def in_use(self, shell_ids: Iterable[str]) -> bool:
+        """Whether any owner still refers to one of ``shell_ids``."""
+        wanted = set(shell_ids)
+        with self._lock:
+            return any(wanted.intersection(ids) for ids in self._owners.values())
+
     def owners(self) -> list[str]:
         with self._lock:
             return list(self._owners)

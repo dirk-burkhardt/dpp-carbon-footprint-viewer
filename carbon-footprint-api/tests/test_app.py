@@ -333,3 +333,43 @@ def test_search(aasx_file):
         assert c.get(f"{API}/search", params={"q": "nicht vorhanden"}).json()["result"] == []
         assert c.get(f"{API}/search", params={"q": ""}).status_code == 400
         assert c.get(f"{API}/search", params={"q": "S", "max_matches": 1}).json()["result"][0]["total"] > 1
+
+
+def test_external_downloads_expire_and_are_loaded_again():
+    import anyio
+
+    calls = []
+
+    def handler(request):
+        calls.append(request.url)
+        return httpx2.Response(200, content=make_aasx(f"urn:ttl:{len(calls)}"))
+
+    now = [1000.0]
+    repo = InMemoryAssetRepository()
+
+    async def resolver(host, port):
+        return ["93.184.215.14"]
+
+    service = ExternalShellService(
+        repo,
+        max_bytes=1_000_000,
+        timeout_seconds=5,
+        max_cached=10,
+        transport=httpx2.MockTransport(handler),
+        resolver=resolver,
+        ttl_seconds=60,
+        clock=lambda: now[0],
+    )
+
+    async def scenario():
+        first = await service.load("https://example.com/x.aasx")
+        assert first[0]["id"] == "urn:ttl:1"
+        await service.load("https://example.com/x.aasx")
+        assert len(calls) == 1
+        now[0] += 61
+        assert await service.purge_expired() == 1
+        assert not repo.has_shell("urn:ttl:1")
+        second = await service.load("https://example.com/x.aasx")
+        assert second[0]["id"] == "urn:ttl:2"
+
+    anyio.run(scenario)

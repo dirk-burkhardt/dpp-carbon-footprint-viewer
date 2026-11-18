@@ -2,6 +2,11 @@
 
 Änderungen der DPPviewer-Oberfläche, neueste Version oben. Versionen nach [Semantic Versioning](https://semver.org/lang/de/), siehe [README](README.md#versionierung).
 
+## 1.4.0 – 2026-11-18
+
+- Über Links geladene und hochgeladene Dateien bleiben im Browser unter External assets gelistet, auch nach dem Wechsel zur Übersicht oder einem Neuladen, bis sie nach der Zeit des Servers ablaufen oder entfernt werden
+- Carbon Footprints kommen aus dem normalisierten Endpunkt der API (`/products/{id}/carbon-footprint`) statt aus eigener Auswertung der Submodelle; damit werden alle Versionen des Templates angezeigt (bisher nur die Struktur von 0.9, Footprints nach 1.0 erschienen mit „carbon footprint provided“, aber ohne Werte). Ohne diesen Endpunkt (fremder AAS-Server) wird wie bisher selbst ausgewertet; Warnungen der API erscheinen mit Asset und Element in der Fehlertabelle
+
 ## 1.3.0 – 2026-11-18
 
 - AAS(X)-Dateien unter „External assets“ hochladen; Größe und Aufbewahrung kommen von der API, beim Entfernen wird der Upload auch auf dem Server gelöscht, Links funktionieren bis zum Ablauf

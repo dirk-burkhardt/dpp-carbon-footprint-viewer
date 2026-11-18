@@ -6,7 +6,7 @@ import ProblemPanel from '@/components/layout/ProblemPanel.vue'
 import '@/lib/problems'
 import { externalShellIds } from '@/lib/search'
 import { storageRef } from '@/lib/storage'
-import { type Component, provide, ref, watch } from 'vue'
+import { type Component, computed, onUnmounted, provide, ref, watch } from 'vue'
 import { allDescriptionsFromApi } from '@/lib/api/registry'
 import { ErrorClient } from '@/lib/ErrorDataHandler'
 import { darkModeKey, shellDescriptionsKey, assetIdMapKey, externalShellsKey, helpBarKey } from '@/lib/injectionKeys'
@@ -17,7 +17,15 @@ import type { components } from '@/lib/api/AssetAdministrationShellRepository'
 import GlobalContextMenuComponent from '@/components/GlobalContextMenuComponent.vue'
 import HelpBar from '@/components/HelpBar.vue'
 import { decodeBase64 } from '@/lib/encoding'
-import { isUploadUrl } from '@/lib/api/uploads'
+import { fetchRawUploadLimits, isUploadUrl, uploadIdFromUrl, uploadInfos } from '@/lib/api/uploads'
+import {
+  addExternalSource,
+  externalSources,
+  hasExternalSource,
+  pruneExpiredSources,
+  setSourceTtl,
+  wasExpired,
+} from '@/lib/externalSources'
 
 
 const router = useRouter();
@@ -54,15 +62,36 @@ provide(assetIdMapKey, assetIdMap);
 const externalShells = ref<{ [url: string]: null | string | components["schemas"]["AssetAdministrationShell"][] }>({});  // null = loading, string = error message, otherwise the shell
 provide(externalShellsKey, externalShells);
 
-// Load one or more external shells if a preload-query is present
-watch(() => router.currentRoute.value.query.preload, (encodedUrls) => {
-  encodedUrls = encodedUrls || [];
-  const urls = ((Array.isArray(encodedUrls) ? encodedUrls : [encodedUrls]) as string[]).map(decodeBase64);
+// Links and uploads of this browser (kept in the browser storage until they expire) and those of the route
+// parameter "preload" (shared links). Sources only known from the route are remembered as well.
+const preloadUrls = computed(() => {
+  const encoded = router.currentRoute.value.query.preload || [];
+  return ((Array.isArray(encoded) ? encoded : [encoded]) as string[]).map(decodeBase64);
+});
+watch(preloadUrls, (urls) => {
+  for (const url of urls) {
+    if (!hasExternalSource(url) && !wasExpired(url)) {
+      addExternalSource(url);
+    }
+  }
+}, { immediate: true });
+const activeSourceUrls = computed(() => [...new Set([
+  ...externalSources.value.map((s) => s.url),
+  ...preloadUrls.value.filter((url) => !wasExpired(url)),
+])]);
+
+// Expired sources disappear from the list; the server deletes them at the same time
+fetchRawUploadLimits().then((limits) => limits && setSourceTtl(limits.ttlSeconds));
+const pruneTimer = window.setInterval(pruneExpiredSources, 60_000);
+pruneExpiredSources();
+onUnmounted(() => window.clearInterval(pruneTimer));
+
+// Load the shells of all external sources
+watch(activeSourceUrls, (urls) => {
   const removeUrls = new Set(Object.keys(externalShells.value));
   for (const url of urls) {
     if (url in externalShells.value) {
       removeUrls.delete(url);
-       
       continue;
     }
     externalShells.value[url] = null;
@@ -77,6 +106,11 @@ watch(() => router.currentRoute.value.query.preload, (encodedUrls) => {
           })
         }
         externalShells.value[url] = assets;
+        // Uploads expire at the time the server reports
+        const info = isUploadUrl(url) ? uploadInfos[uploadIdFromUrl(url)] : undefined;
+        if (info) {
+          addExternalSource(url, Date.parse(info.expiresAt));
+        }
       }
     }).catch((e) => {
       if (isUploadUrl(url) && e.status === 404) {

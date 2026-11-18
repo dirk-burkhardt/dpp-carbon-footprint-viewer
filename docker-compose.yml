@@ -26,21 +26,24 @@ services:
     build:
       context: ./carbon-footprint-api
       args:
-        VERSION: "4.5.0"
-    image: dppviewer-api:4.5.0
+        VERSION: "4.6.0"
+    image: dppviewer-api:4.6.0
     environment:
       CFA_AASX: /opt/repo/*.aasx
       CFA_LOG_LEVEL: ${API_LOG_LEVEL:-INFO}
       CFA_DOCS_ENABLED: ${API_DOCS_ENABLED:-true}
       CFA_EXTERNAL_SHELLS_ENABLED: ${API_EXTERNAL_SHELLS_ENABLED:-true}
-      # Hochgeladene Dateien liegen nur im Arbeitsspeicher und sind nach Ablauf oder Neustart gelöscht
+      # Hochgeladene Dateien liegen in repo/uploads und werden nach Ablauf und bei jedem Neustart gelöscht
       CFA_UPLOADS_ENABLED: ${UPLOADS_ENABLED:-true}
+      CFA_UPLOAD_DIR: /opt/repo/uploads
       CFA_UPLOAD_MAX_MB: ${UPLOAD_MAX_MB:-25}
       CFA_UPLOAD_TTL_HOURS: ${UPLOAD_TTL_HOURS:-3}
       # Die API ist nur über den UI-Container erreichbar, dessen Weiterleitungs-Header gelten
       CFA_FORWARDED_ALLOW_IPS: "*"
     volumes:
       - ./repo:/opt/repo:ro
+      # Einziger beschreibbarer Ordner; unter Linux muss er dem Benutzer 10001 des Containers gehören
+      - ./repo/uploads:/opt/repo/uploads
     networks:
       - backend
     # Kein Port nach außen: Zugriff nur über die Oberfläche (/api), Swagger unter /api/docs
@@ -54,8 +57,8 @@ services:
     build:
       context: ./carbon-footprint-ui
       args:
-        VERSION: "1.3.0"
-    image: dppviewer-ui:1.3.0
+        VERSION: "1.4.0"
+    image: dppviewer-ui:1.4.0
     depends_on:
       api:
         condition: service_healthy

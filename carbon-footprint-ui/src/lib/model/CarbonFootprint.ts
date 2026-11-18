@@ -10,6 +10,7 @@ import { IRDI, IRI } from '@/lib/model/semanticIds'
 import { ensure } from '@/lib/util'
 import { DateTime } from 'luxon'
 import { ErrorClient } from '@/lib/ErrorDataHandler'
+import { fetchCarbonFootprint, toCarbonFootprintType } from '@/lib/api/products'
 
 
 export function parseCarbonFootprintAddress(idTree: IdTree) {
@@ -34,6 +35,28 @@ function idShortPath(tree: IdTree): string {
     }
   }
   return parts.join(' › ');
+}
+
+/**
+ * Carbon footprint of a shell. Uses the normalized data of the DPPviewer API, which reads all versions of the
+ * Carbon Footprint template; only if the API does not offer it, the submodels are read here (supports the
+ * structure of version 0.9 only).
+ * @param aasIdentifier id of the shell
+ * @param submodels Carbon Footprint submodels of the shell, for the fallback
+ * @param source name of the asset, used to attribute warnings
+ * @returns undefined if the shell has no carbon footprint
+ */
+export async function loadCarbonFootprintData(
+  aasIdentifier: string,
+  submodels: () => IdTree[] | Promise<IdTree[]>,
+  source?: string,
+): Promise<CarbonFootprintType | undefined> {
+  const result = await fetchCarbonFootprint(aasIdentifier);
+  if (result !== null) {
+    return result.footprints.length ? toCarbonFootprintType(result, source ?? aasIdentifier) : undefined;
+  }
+  const trees = await submodels();
+  return trees.length ? toCarbonFootprintData(trees, undefined, source) : undefined;
 }
 
 /**

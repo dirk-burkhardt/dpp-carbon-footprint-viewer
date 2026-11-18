@@ -44,6 +44,7 @@ Vorrang.
 | `--noUploads` | `CFA_UPLOADS_ENABLED=false` | Hochladen von Dateien abschalten |
 | `--uploadMaxMb` | `CFA_UPLOAD_MAX_MB` | Max. Größe einer hochgeladenen Datei in MB (Standard 25) |
 | `--uploadTtlHours` | `CFA_UPLOAD_TTL_HOURS` | Stunden, nach denen ein Upload gelöscht wird (Standard 3) |
+| `--uploadDir` | `CFA_UPLOAD_DIR` | Ordner für hochgeladene Dateien, z. B. `../repo/uploads` (Standard: nur Arbeitsspeicher). Beim Start werden dort frühere Uploads gelöscht, andere Dateien bleiben unberührt |
 | | `CFA_UPLOAD_MAX_COUNT` | Max. Anzahl gleichzeitig gespeicherter Uploads, älteste fallen heraus (Standard 20) |
 | | `CFA_MAX_ENTRY_BYTES` | Max. entpackte Größe eines Eintrags im AASX (Standard 256 MiB) |
 | | `CFA_FORWARDED_ALLOW_IPS` | IPs von Reverse-Proxys, deren `X-Forwarded-*`-Header vertraut wird |
@@ -59,9 +60,9 @@ Vorrang.
 | `GET /api/v4/shells/{id}/submodels/{smId}/submodel-elements/{idShortPath}` | Element (`a.b[0].c`), unbekannter Pfad: 200 ohne Inhalt |
 | `GET …/submodel-elements/{idShortPath}/attachment` | Datei eines File- oder Blob-Elements |
 | `GET /api/v4/shells/{id}/asset-information/thumbnail` | Vorschaubild |
-| `GET /api/v4/external-shells/{url}` | Shells aus einer Datei unter einer öffentlichen URL laden |
+| `GET /api/v4/external-shells/{url}` | Shells aus einer Datei unter einer öffentlichen URL laden; nach `CFA_UPLOAD_TTL_HOURS` verworfen und beim nächsten Abruf neu geladen |
 | `GET /api/v4/uploads` | Ob Hochladen möglich ist, maximale Größe (`maxBytes`) und Aufbewahrung (`ttlSeconds`) |
-| `POST /api/v4/uploads?filename=…` | Datei (`.aasx`, `.aas.json`, `.aas.xml`) als Anfragekörper hochladen; Antwort mit `id`, `expiresAt` und den Shells. Nur im Arbeitsspeicher, gelöscht nach Ablauf, bei Überschreiten von `CFA_UPLOAD_MAX_COUNT` und bei jedem Neustart |
+| `POST /api/v4/uploads?filename=…` | Datei (`.aasx`, `.aas.json`, `.aas.xml`) als Anfragekörper hochladen; Antwort mit `id`, `expiresAt` und den Shells. Abgelegt in `CFA_UPLOAD_DIR`, gelöscht nach Ablauf, bei Überschreiten von `CFA_UPLOAD_MAX_COUNT` und bei jedem Neustart |
 | `GET /api/v4/uploads/{uploadId}` | Upload mit seinen Shells, 404 nach Ablauf |
 | `DELETE /api/v4/uploads/{uploadId}` | Upload vorzeitig löschen |
 | `GET /api/v4/asset/all`, `/asset/{id}/submodel/all`, `/asset/{id}/submodel/{smId}` | Varianten mit nicht codierten IDs |
@@ -157,8 +158,8 @@ tools/          record_snapshots.py zum Aufzeichnen der Referenzantworten
 - `/external-shells` ruft nur öffentliche http(s)-Adressen ab (kein localhost, keine privaten oder link-lokalen
   Netze, auch nicht über Weiterleitungen oder DNS-Rebinding), mit Größen- und Zeitlimit. Heruntergeladene
   Shells ersetzen nie vorhandene und werden nach dem LRU-Prinzip wieder entfernt.
-- `/uploads` nimmt Dateien bis `CFA_UPLOAD_MAX_MB` an und hält sie nur im Arbeitsspeicher (nichts wird auf
-  die Platte geschrieben). Jeder Upload erhält eine zufällige, nicht erratbare ID (144 bit); hochgeladene Shells
+- `/uploads` nimmt Dateien bis `CFA_UPLOAD_MAX_MB` an und legt sie unter `CFA_UPLOAD_DIR` ab (Dateiname nur aus
+  der zufälligen ID, nie aus dem Namen des Nutzers), ohne Ordner nur im Arbeitsspeicher. Jeder Upload erhält eine zufällige, nicht erratbare ID (144 bit); hochgeladene Shells
   sind versteckt, ersetzen nie vorhandene und werden nach `CFA_UPLOAD_TTL_HOURS`, beim Überschreiten von
   `CFA_UPLOAD_MAX_COUNT` und bei jedem Neustart gelöscht.
 - AASX-Dateien werden mit Größenlimit je Eintrag gelesen (Zip-Bomben), XML ohne Entitäten und DTD (XXE).

@@ -8,7 +8,7 @@ import { ErrorClient } from '@/lib/ErrorDataHandler'
 import { IRI } from '@/lib/model/semanticIds'
 import type { CarbonFootprintType, CarbonTreeType } from '@/lib/model/CarbonFootprintType'
 import { ensure } from '@/lib/util'
-import { toCarbonFootprintData } from '@/lib/model/CarbonFootprint'
+import { loadCarbonFootprintData } from '@/lib/model/CarbonFootprint'
 
 
 export default class CarbonData {
@@ -37,14 +37,15 @@ export default class CarbonData {
   private async loadShell(aasIdentifier: string) {
     // Name of the asset for warnings about its carbon footprint
     const source = await Shells.shell(aasIdentifier).then((s) => s.idShort || aasIdentifier, () => aasIdentifier);
-    for await (const cf of Shells.submodelsBySemanticId(aasIdentifier, [ IRI.CARBON_FOOTPRINT['0/9'], IRI.CARBON_FOOTPRINT['1/0'] ])) {
-      if (!(aasIdentifier in this.footprintsById)) {
-        this.footprintsById[aasIdentifier] = {
-          product: [],
-          transport: [],
-        };
+    const footprint = await loadCarbonFootprintData(aasIdentifier, async () => {
+      const trees: IdTree[] = [];
+      for await (const cf of Shells.submodelsBySemanticId(aasIdentifier, [ IRI.CARBON_FOOTPRINT['0/9'], IRI.CARBON_FOOTPRINT['1/0'] ])) {
+        trees.push(new IdTree(cf));
       }
-      toCarbonFootprintData(new IdTree(cf), this.footprintsById[aasIdentifier], source);
+      return trees;
+    }, source);
+    if (footprint) {
+      this.footprintsById[aasIdentifier] = footprint;
     }
     return Promise.all([
       Shells.shell(aasIdentifier).then((d) => {

@@ -6,7 +6,7 @@ from fastapi.testclient import TestClient
 from carbon_footprint_api.config import Settings
 from carbon_footprint_api.main import create_app
 from carbon_footprint_api.repository import InMemoryAssetRepository
-from carbon_footprint_api.services import HiddenShellLeases, UploadService
+from carbon_footprint_api.services import HiddenShellLeases, UploadError, UploadService
 from carbon_footprint_api.services.uploads import clean_filename
 from test_app import API, make_aasx
 
@@ -135,3 +135,51 @@ def test_shared_shell_stays_while_still_used():
 )
 def test_clean_filename(raw, expected):
     assert clean_filename(raw) == expected
+
+
+def test_uploads_are_stored_in_directory_and_deleted(tmp_path):
+    directory = tmp_path / "uploads"
+    directory.mkdir()
+    # files of an earlier run are removed on startup, other files are kept
+    (directory / ("a" * 24 + ".aasx")).write_bytes(b"old")
+    (directory / "README.txt").write_text("keep")
+    clock = FakeClock()
+    repo = InMemoryAssetRepository()
+    service = UploadService(repo, max_bytes=10**6, ttl_seconds=60, max_uploads=5, clock=clock, directory=directory)
+    assert sorted(p.name for p in directory.iterdir()) == ["README.txt"]
+    upload, _ = service.add(make_aasx("urn:disk"), "Datei.aasx")
+    assert upload.path == directory / f"{upload.token}.aasx" and upload.path.exists()
+    # attachments are read from the stored file
+    assert repo.get_thumbnail("urn:disk") is not None
+    clock.now += 61
+    service.purge_expired()
+    assert not upload.path.exists() and not repo.has_shell("urn:disk")
+    assert sorted(p.name for p in directory.iterdir()) == ["README.txt"]
+
+
+def test_invalid_upload_leaves_no_file(tmp_path):
+    service = UploadService(
+        InMemoryAssetRepository(), max_bytes=10**6, ttl_seconds=60, max_uploads=5, directory=tmp_path
+    )
+    with pytest.raises(UploadError):
+        service.add(b"kein AAS", "x.aasx")
+    assert list(tmp_path.iterdir()) == []
+
+
+def test_unusable_directory_falls_back_to_memory(tmp_path):
+    blocker = tmp_path / "file"
+    blocker.write_text("")
+    service = UploadService(
+        InMemoryAssetRepository(), max_bytes=10**6, ttl_seconds=60, max_uploads=5, directory=blocker / "uploads"
+    )
+    assert service.directory is None
+    upload, shells = service.add(make_aasx("urn:mem"), "x.aasx")
+    assert upload.path is None and shells
+
+
+def test_upload_dir_setting(tmp_path):
+    c, _ = _client(upload_dir=tmp_path)
+    token = _upload(c, make_aasx("urn:via-api")).json()["id"]
+    assert (tmp_path / f"{token}.aasx").exists()
+    c.delete(f"{API}/uploads/{token}")
+    assert not (tmp_path / f"{token}.aasx").exists()
