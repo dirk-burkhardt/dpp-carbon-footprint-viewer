@@ -11,7 +11,7 @@ from fastapi import Depends, Request
 
 from ..config import Settings
 from ..repository import AssetRepository
-from ..services import ExternalShellService
+from ..services import ExternalShellService, UploadService
 from .errors import ApiError
 
 
@@ -27,8 +27,13 @@ def get_external_service(request: Request) -> ExternalShellService:
     return request.app.state.external_service
 
 
+def get_upload_service(request: Request) -> UploadService:
+    return request.app.state.upload_service
+
+
 Repository = Annotated[AssetRepository, Depends(get_repository)]
 External = Annotated[ExternalShellService, Depends(get_external_service)]
+Uploads = Annotated[UploadService, Depends(get_upload_service)]
 AppSettings = Annotated[Settings, Depends(get_settings)]
 
 

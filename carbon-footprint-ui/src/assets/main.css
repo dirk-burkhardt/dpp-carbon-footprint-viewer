@@ -150,7 +150,8 @@ table.table-pin-next-to-last tr > *:nth-last-child(2) {
 }
 
 .page-tabs {
-  @apply h-[calc(100vh-3.5rem)] max-h-full shrink sticky top-14 bottom-0 border-r-2 border-r-primary;
+  /* The header scrolls away outside the asset selection, so the navigation sticks to the top of the window */
+  @apply h-screen max-h-full shrink sticky top-0 bottom-0 border-r-2 border-r-primary;
 
   .page-tabs-container {
     @apply flex flex-col gap-2 h-full mx-2;

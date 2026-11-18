@@ -29,10 +29,13 @@ const idMap = inject<Ref<AssetIdMap>>(assetIdMapKey);
 
 // All information regarding an asset, incl. footprint infromation
 const info = computedAsync<Awaited<ReturnType<typeof loadFullAssetInfo> | undefined>>(async () => {
-  if (!idMap?.value) {
+  // When navigating away (e.g. via the breadcrumbs) the route changes before this view is unmounted and the
+  // parameter is missing; loading would then fail with an error about an undefined asset
+  const asset = route.params.asset;
+  if (!idMap?.value || typeof asset !== 'string' || !asset) {
     return undefined;
   }
-  return BackOnErrorHandler.bind(loadFullAssetInfo(route.params.asset as string, idMap.value, "url-", () => {}, simulationFromRoute(route)), (e) => {
+  return BackOnErrorHandler.bind(loadFullAssetInfo(asset, idMap.value, "url-", () => {}, simulationFromRoute(route)), (e) => {
     if (e.status === 422) {
       return "The URL to the asset is invalid or does not point to a valid asset";
     }
@@ -200,7 +203,7 @@ const showSimulation = computed(() => info.value?.carbonTree?.hasChanges && rout
 
       <!-- Bar indicating that this is a simulation -->
       <Transition>
-        <div class="sticky top-16 duration-200 px-4 z-30" v-if="showSimulation">
+        <div class="sticky top-2 duration-200 px-4 z-30" v-if="showSimulation">
           <div class="alert alert-warning shadow-sm">
             <strong>Simulation</strong>
             <span>

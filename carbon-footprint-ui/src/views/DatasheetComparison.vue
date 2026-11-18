@@ -31,11 +31,12 @@ type Info = Awaited<ReturnType<typeof loadFullAssetInfo>>
 // Alle Assets anzeigen, auch ohne CO2-Daten. Kann ein einzelnes nicht geladen werden, erscheint es in der
 // Fehlerliste; nur wenn keines geladen werden kann, ersetzt ein Hinweis die Tabelle.
 const infos = computedAsync<Info[] | undefined>(async () => {
-  if (!idMap?.value) {
+  // Route already changed while leaving the view
+  if (!idMap?.value || route.name !== 'datasheet') {
     return undefined;
   }
   const results = await Promise.allSettled(routeAssets.value.map((a) =>
-    loadFullAssetInfo(a, idMap.value, "url-", (title, details) => ErrorClient.warn(title, details), simulationFromRoute(route))
+    loadFullAssetInfo(a, idMap.value, "url-", (title, details, source) => ErrorClient.warn(title, details, source ? { source } : undefined), simulationFromRoute(route))
   ));
   results.forEach((r, i) => {
     if (r.status === 'rejected') {

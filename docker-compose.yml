@@ -26,13 +26,17 @@ services:
     build:
       context: ./carbon-footprint-api
       args:
-        VERSION: "4.4.0"
-    image: dppviewer-api:4.4.0
+        VERSION: "4.5.0"
+    image: dppviewer-api:4.5.0
     environment:
       CFA_AASX: /opt/repo/*.aasx
       CFA_LOG_LEVEL: ${API_LOG_LEVEL:-INFO}
       CFA_DOCS_ENABLED: ${API_DOCS_ENABLED:-true}
       CFA_EXTERNAL_SHELLS_ENABLED: ${API_EXTERNAL_SHELLS_ENABLED:-true}
+      # Hochgeladene Dateien liegen nur im Arbeitsspeicher und sind nach Ablauf oder Neustart gelöscht
+      CFA_UPLOADS_ENABLED: ${UPLOADS_ENABLED:-true}
+      CFA_UPLOAD_MAX_MB: ${UPLOAD_MAX_MB:-25}
+      CFA_UPLOAD_TTL_HOURS: ${UPLOAD_TTL_HOURS:-3}
       # Die API ist nur über den UI-Container erreichbar, dessen Weiterleitungs-Header gelten
       CFA_FORWARDED_ALLOW_IPS: "*"
     volumes:
@@ -50,8 +54,8 @@ services:
     build:
       context: ./carbon-footprint-ui
       args:
-        VERSION: "1.2.5"
-    image: dppviewer-ui:1.2.5
+        VERSION: "1.3.0"
+    image: dppviewer-ui:1.3.0
     depends_on:
       api:
         condition: service_healthy
@@ -62,6 +66,7 @@ services:
       MAP_TILE_URL: ${MAP_TILE_URL:-}
       MAP_ATTRIBUTION: ${MAP_ATTRIBUTION:-}
       GEOCODING_URL: ${GEOCODING_URL:-}
+      UPLOAD_MAX_MB: ${UPLOAD_MAX_MB:-25}
     networks:
       - backend
     deploy:

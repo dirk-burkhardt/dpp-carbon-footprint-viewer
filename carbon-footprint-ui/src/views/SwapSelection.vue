@@ -39,10 +39,12 @@ const draggedShell = ref<ShellDescriptionSmallInterface | undefined>();
 provide<Ref<ShellDescriptionSmallInterface | undefined>>(draggedShellKey, draggedShell)
 
 const info = computedAsync(async () => {
-  if (!idMap?.value) {
+  // Route already changed while leaving the view
+  const asset = route.params.asset;
+  if (!idMap?.value || typeof asset !== 'string' || !asset) {
     return undefined;
   }
-  const data = await BackOnErrorHandler.bind(loadFullAssetInfo(route.params.asset as string, idMap.value, "url-", () => {}, simulationFromRoute(route)), (e) => {
+  const data = await BackOnErrorHandler.bind(loadFullAssetInfo(asset, idMap.value, "url-", () => {}, simulationFromRoute(route)), (e) => {
     if (e.status === 422) {
       return "The URL to the asset is invalid or does not point to a valid asset";
     }
@@ -117,7 +119,7 @@ function cancelSwap() {
         </div>
       </div>
     </div>
-    <div class="flex flex-col shadow-lg h-[calc(100vh-3.5rem)] sticky top-14">
+    <div class="flex flex-col shadow-lg h-screen sticky top-0">
       <!-- Cart -->
       <div class="transition-all duration-300">
         <div class="bg-linear-to-b from-0% to-100% bg-primary/40 transition-all duration-300 p-4">

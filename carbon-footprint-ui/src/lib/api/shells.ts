@@ -1,6 +1,7 @@
 import { cached } from '@/lib/storage'
 import apiConfig from '@/lib/apiConfig';
 import clients from '@/lib/api/clients'
+import { fetchUpload, isUploadUrl, uploadIdFromUrl } from '@/lib/api/uploads'
 import type { components } from '@/lib/api/AssetAdministrationShellRepository'
 import { decodeBase64, encodeId } from '@/lib/encoding'
 
@@ -143,6 +144,10 @@ export class Shells {
 
   @cached
   static async externalShell(url: string): Promise<components["schemas"]["AssetAdministrationShell"][]> {
+    // Uploaded files are referenced by a pseudo URL "upload:<id>"
+    if (isUploadUrl(url)) {
+      return (await fetchUpload(uploadIdFromUrl(url))).shells;
+    }
     if (!clients.assetAdditionals) {
       console.error("assetAdditionalsClient is not available because it was not set as environment variable during build.")
       throw new Error("assetAdditionalsClient is not available because it was not set as environment variable during build.")
@@ -171,6 +176,10 @@ export class Shells {
     }
     return (await Promise.all(
       aasIdentifiersOrUrl.map((source) => {
+        // Defensive: a missing route parameter must not crash with "startsWith of undefined"
+        if (typeof source !== "string" || !source) {
+          return Promise.reject(new Error("No asset identifier given"));
+        }
         if ((!urlPrefix || source.startsWith(urlPrefix)) && (!aasPrefix || !source.startsWith(aasPrefix))) {
           return Shells.externalShell(decodeBase64(source.substring((urlPrefix || "").length)));
         } else if ((!aasPrefix || source.startsWith(aasPrefix)) && (!urlPrefix || !source.startsWith(urlPrefix))) {

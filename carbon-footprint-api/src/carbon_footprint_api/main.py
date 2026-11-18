@@ -17,7 +17,7 @@ from .api.routes import build_api_router, health
 from .api.static import install_static_files
 from .config import Settings
 from .repository import AssetRepository, InMemoryAssetRepository
-from .services import ExternalShellService
+from .services import ExternalShellService, HiddenShellLeases, UploadService
 
 logger = logging.getLogger(__name__)
 
@@ -32,13 +32,25 @@ def create_app(settings: Optional[Settings] = None, repository: Optional[AssetRe
     load_files = repository is None
     repo: AssetRepository = repository or InMemoryAssetRepository(settings.max_entry_bytes)
 
+    leases = HiddenShellLeases(repo)
+    uploads = UploadService(
+        repo,
+        max_bytes=settings.upload_max_bytes,
+        ttl_seconds=settings.upload_ttl_seconds,
+        max_uploads=settings.upload_max_count,
+        leases=leases,
+    )
+
     @asynccontextmanager
     async def lifespan(app: FastAPI) -> AsyncIterator[None]:
         if load_files and isinstance(repo, InMemoryAssetRepository):
             aas_files, aasx_files = settings.aas_files(), settings.aasx_files()
             await anyio.to_thread.run_sync(lambda: repo.load_files(aas_files, aasx_files))
             logger.info("%d Shells geladen", repo.shell_count())
-        yield
+        async with anyio.create_task_group() as tasks:
+            tasks.start_soon(_purge_uploads_periodically, uploads)
+            yield
+            tasks.cancel_scope.cancel()
 
     app = FastAPI(
         title="AAS(X) Carbon Footprint API",
@@ -57,7 +69,9 @@ def create_app(settings: Optional[Settings] = None, repository: Optional[AssetRe
         timeout_seconds=settings.external_timeout_seconds,
         max_cached=settings.external_max_cached,
         allow_private_networks=settings.external_allow_private_networks,
+        leases=leases,
     )
+    app.state.upload_service = uploads
 
     app.include_router(health.router)
     app.include_router(build_api_router())
@@ -72,10 +86,20 @@ def create_app(settings: Optional[Settings] = None, repository: Optional[AssetRe
             PrefixCORSMiddleware,
             prefix=API_PREFIX,
             allow_origins=settings.cors_origins,
-            allow_methods=["GET"],
+            allow_methods=["GET", "POST", "DELETE"],
             allow_headers=["*"],
             allow_credentials=False,  # die API nutzt keine Cookies oder Anmeldung
         )
     app.add_middleware(Base64SegmentMiddleware, prefix=API_PREFIX)
     app.add_middleware(SecurityHeadersMiddleware)
     return app
+
+
+UPLOAD_PURGE_INTERVAL_SECONDS = 60.0
+
+
+async def _purge_uploads_periodically(uploads: UploadService) -> None:
+    """Deletes expired uploads even if nobody accesses them (they are also purged on every access)."""
+    while True:
+        await anyio.sleep(UPLOAD_PURGE_INTERVAL_SECONDS)
+        uploads.purge_expired()

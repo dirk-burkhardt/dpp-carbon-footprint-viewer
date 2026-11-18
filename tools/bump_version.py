@@ -9,9 +9,9 @@ Teil:   api | ui
 Stufe:  major (inkompatible Änderung) | minor (neue Funktion) | patch (Fehlerbehebung)
 
 Geändert werden:
-- api: carbon-footprint-api/src/carbon_footprint_api/__init__.py (__version__) und carbon-footprint-api/README.md
-- ui:  carbon-footprint-ui/package.json, package-lock.json und carbon-footprint-ui/README.md
-- immer: README.md im Projektordner (Changelog des Gesamtprojekts) und die Image-Versionen in docker-compose.yml
+- api: carbon-footprint-api/src/carbon_footprint_api/__init__.py (__version__) und carbon-footprint-api/CHANGELOG.md
+- ui:  carbon-footprint-ui/package.json, package-lock.json und carbon-footprint-ui/CHANGELOG.md
+- immer: CHANGELOG.md im Projektordner (Changelog des Gesamtprojekts) und die Image-Versionen in docker-compose.yml
 """
 
 from __future__ import annotations
@@ -24,13 +24,13 @@ from pathlib import Path
 
 ROOT = Path(__file__).resolve().parent.parent
 API_INIT = ROOT / "carbon-footprint-api" / "src" / "carbon_footprint_api" / "__init__.py"
-API_README = ROOT / "carbon-footprint-api" / "README.md"
+API_CHANGELOG = ROOT / "carbon-footprint-api" / "CHANGELOG.md"
 UI_PACKAGE = ROOT / "carbon-footprint-ui" / "package.json"
 UI_LOCK = ROOT / "carbon-footprint-ui" / "package-lock.json"
-UI_README = ROOT / "carbon-footprint-ui" / "README.md"
-ROOT_README = ROOT / "README.md"
+UI_CHANGELOG = ROOT / "carbon-footprint-ui" / "CHANGELOG.md"
+ROOT_CHANGELOG = ROOT / "CHANGELOG.md"
 COMPOSE = ROOT / "docker-compose.yml"
-CHANGELOG_HEADING = "## Changelog"
+ENTRY_PREFIX = "## "
 VERSION_RE = re.compile(r'__version__ = "(\d+)\.(\d+)\.(\d+)"')
 
 
@@ -45,19 +45,26 @@ def bump(version: str, level: str) -> str:
     raise SystemExit(f"Unbekannte Stufe {level!r}, erlaubt: major, minor, patch")
 
 
-def add_changelog_entry(readme: Path, heading: str, line: str) -> None:
-    """Fügt unter "## Changelog" einen Eintrag ein (bzw. ergänzt einen vorhandenen gleichen Abschnitt)."""
-    text = readme.read_text(encoding="utf-8")
-    if CHANGELOG_HEADING not in text:
-        raise SystemExit(f"{readme} enthält keinen Abschnitt '{CHANGELOG_HEADING}'")
-    head, tail = text.split(CHANGELOG_HEADING, 1)
-    tail = tail.lstrip("\n")
-    if tail.startswith(heading + "\n"):
-        first, rest = tail.split("\n", 1)
-        tail = f"{first}\n\n{line}\n" + rest.lstrip("\n")
+def add_changelog_entry(changelog: Path, heading: str, line: str) -> None:
+    """Insert a changelog entry above the newest one.
+
+    Entries are second-level headings ("## 1.2.3 – 2026-01-01" or "## 2026-01-01"). If the newest entry already
+    has the given heading, the line is appended to it instead of creating a new entry.
+    """
+    text = changelog.read_text(encoding="utf-8")
+    lines = text.split("\n")
+    first = next((i for i, current in enumerate(lines) if current.startswith(ENTRY_PREFIX)), None)
+    if first is None:
+        text = text.rstrip("\n") + f"\n\n{heading}\n\n{line}\n"
+    elif lines[first] == heading:
+        # Newest entry has the same heading: add the line at the top of its list
+        position = first + 2 if first + 1 < len(lines) and lines[first + 1] == "" else first + 1
+        lines.insert(position, line)
+        text = "\n".join(lines)
     else:
-        tail = f"{heading}\n\n{line}\n\n" + tail
-    readme.write_text(f"{head}{CHANGELOG_HEADING}\n\n{tail}", encoding="utf-8")
+        lines[first:first] = [heading, "", line, ""]
+        text = "\n".join(lines)
+    changelog.write_text(text, encoding="utf-8")
 
 
 def update_compose(service: str, version: str) -> None:
@@ -83,7 +90,7 @@ def main(part: str, level: str, description: str) -> None:
         old = ".".join(match.groups())
         new = bump(old, level)
         API_INIT.write_text(VERSION_RE.sub(f'__version__ = "{new}"', text, count=1), encoding="utf-8")
-        add_changelog_entry(API_README, f"### {new} – {today}", f"- {description}")
+        add_changelog_entry(API_CHANGELOG, f"## {new} – {today}", f"- {description}")
         update_compose("api", new)
         label = "API"
     elif part == "ui":
@@ -97,12 +104,12 @@ def main(part: str, level: str, description: str) -> None:
             lock["version"] = new
             lock.get("packages", {}).get("", {})["version"] = new
             UI_LOCK.write_text(json.dumps(lock, indent=2, ensure_ascii=False) + "\n", encoding="utf-8")
-        add_changelog_entry(UI_README, f"### {new} – {today}", f"- {description}")
+        add_changelog_entry(UI_CHANGELOG, f"## {new} – {today}", f"- {description}")
         update_compose("ui", new)
         label = "UI"
     else:
         raise SystemExit(f"Unbekannter Teil {part!r}, erlaubt: api, ui")
-    add_changelog_entry(ROOT_README, f"### {today}", f"- {label} {new}: {description}")
+    add_changelog_entry(ROOT_CHANGELOG, f"## {today}", f"- {label} {new}: {description}")
     print(f"{label}: {old} -> {new}")
 
 

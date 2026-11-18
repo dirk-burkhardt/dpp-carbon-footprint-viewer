@@ -58,6 +58,20 @@ class Settings(BaseSettings):
     external_timeout_seconds: float = Field(30.0, gt=0)
     external_max_cached: int = Field(50, ge=1, description="Max. Anzahl gemerkter heruntergeladener Dateien")
 
+    # Temporäres Hochladen über /uploads (nur im Arbeitsspeicher, nach Ablauf und bei jedem Neustart gelöscht)
+    uploads_enabled: bool = True
+    upload_max_mb: float = Field(25.0, gt=0, description="Max. Größe einer hochgeladenen Datei in MB")
+    upload_ttl_hours: float = Field(3.0, gt=0, description="Stunden, nach denen ein Upload gelöscht wird")
+    upload_max_count: int = Field(20, ge=1, description="Max. Anzahl gleichzeitig gespeicherter Uploads")
+
+    @property
+    def upload_max_bytes(self) -> int:
+        return int(self.upload_max_mb * MiB)
+
+    @property
+    def upload_ttl_seconds(self) -> float:
+        return self.upload_ttl_hours * 3600
+
     @field_validator("aas", "aasx", "cors_origins", mode="before")
     @classmethod
     def _split_comma_list(cls, value: object) -> object:

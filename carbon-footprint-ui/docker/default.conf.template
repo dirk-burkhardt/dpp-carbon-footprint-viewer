@@ -2,6 +2,8 @@
 
 # Höchstens 10 Downloads externer Dateien pro Minute und Client (die API lädt dafür fremde URLs)
 limit_req_zone $binary_remote_addr zone=external_shells:10m rate=10r/m;
+# Höchstens 10 Uploads pro Minute und Client
+limit_req_zone $binary_remote_addr zone=uploads:10m rate=10r/m;
 limit_req_status 429;
 
 map $host $dppviewer_csp {
@@ -36,6 +38,19 @@ server {
 
     location ~ ^/api/v[0-9]+/external-shells/ {
         limit_req zone=external_shells burst=5 nodelay;
+        proxy_pass $api_upstream;
+        proxy_http_version 1.1;
+        proxy_set_header Host $host;
+        proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+        proxy_set_header X-Forwarded-Proto $scheme;
+        proxy_read_timeout 120s;
+    }
+
+    # Hochladen von AAS(X)-Dateien: größere Anfragen nur hier, Grenze aus UPLOAD_MAX_MB (die API prüft selbst auch)
+    location ~ ^/api/v[0-9]+/uploads$ {
+        limit_req zone=uploads burst=5 nodelay;
+        client_max_body_size @UPLOAD_BODY_LIMIT@;
+        proxy_request_buffering off;
         proxy_pass $api_upstream;
         proxy_http_version 1.1;
         proxy_set_header Host $host;

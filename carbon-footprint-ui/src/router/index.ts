@@ -33,7 +33,7 @@ const router = createRouter({
           component: () => import("@/views/single/SingleOverview.vue"),
           meta: {
             back: "home",
-            breadcrumb: "Overview of One Asset"
+            breadcrumb: "Overview"
           },
         },
         {
@@ -60,7 +60,7 @@ const router = createRouter({
           component: () => import("@/views/single/SingleSimulation.vue"),
           meta: {
             back: "visualization.single",
-            breadcrumb: "Component Analysis"
+            breadcrumb: "Simulation"
           },
         }
       ]

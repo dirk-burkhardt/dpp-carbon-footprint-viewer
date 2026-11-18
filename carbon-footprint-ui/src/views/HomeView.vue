@@ -2,16 +2,28 @@
 /**
  * Repository Overview and Asset Selection
  */
-import { computed, inject, type Ref, ref } from 'vue'
+import { computed, inject, onMounted, type Ref, ref } from 'vue'
 import { externalShellsKey, shellDescriptionsKey } from '@/lib/injectionKeys'
 import type { ShellDescriptionSmallInterface } from '@/lib/api/shellTypes'
-import { GlobeEuropeAfricaIcon, CheckCircleIcon, ExclamationCircleIcon } from '@heroicons/vue/24/outline'
+import { GlobeEuropeAfricaIcon, CheckCircleIcon, ExclamationCircleIcon, ArrowUpTrayIcon } from '@heroicons/vue/24/outline'
 import { createUpdateQuery } from '@/lib/util'
 import { useRouter } from 'vue-router'
 import clients from '@/lib/api/clients'
 import type { components } from '@/lib/api/AssetAdministrationShellRepository'
 import { toDescriptionsSmall } from '@/lib/api/registry'
 import { encodeBase64 } from '@/lib/encoding'
+import {
+  deleteUpload,
+  fetchUploadLimits,
+  formatMegabytes,
+  isUploadUrl,
+  uploadFile,
+  uploadIdFromUrl,
+  uploadInfos,
+  uploadUrl,
+  type UploadLimits,
+  UploadRequestError,
+} from '@/lib/api/uploads'
 import AssetGridCard from '@/components/AssetGridCard.vue'
 import FavoritesBox from '@/components/FavoritesBox.vue'
 import StatusIndicator from '@/components/layout/StatusIndicator.vue'
@@ -87,6 +99,78 @@ function removeExternalUrlRoute(url: string) {
   return updateQuery('preload', preload.value.filter(u => u !== url));
 }
 
+// Uploads: limits come from the API, null = the API offers no uploads
+const uploadLimits = ref<UploadLimits | null>(null);
+const uploadInput = ref<HTMLInputElement>();
+const uploading = ref(false);
+const uploadError = ref<string | null>(null);
+onMounted(async () => {
+  if (clients.hasAssetAdditionals) {
+    uploadLimits.value = await fetchUploadLimits();
+  }
+});
+
+const retentionText = computed(() => {
+  const hours = (uploadLimits.value?.ttlSeconds ?? 0) / 3600;
+  return hours >= 1 ? `${Number.isInteger(hours) ? hours : hours.toFixed(1)} h` : `${Math.round(hours * 60)} min`;
+});
+
+async function onFileSelected() {
+  const file = uploadInput.value?.files?.[0];
+  if (!file || !uploadLimits.value) {
+    return;
+  }
+  uploadError.value = null;
+  if (file.size > uploadLimits.value.maxBytes) {
+    uploadError.value = `${file.name} is larger than ${formatMegabytes(uploadLimits.value.maxBytes)}`;
+    uploadInput.value!.value = '';
+    return;
+  }
+  uploading.value = true;
+  try {
+    const upload = await uploadFile(file);
+    const url = uploadUrl(upload.id);
+    // Already loaded, App.vue does not need to request the shells again
+    if (externalShells) {
+      externalShells.value[url] = upload.shells;
+    }
+    await router.push(updateQuery('preload', [...preload.value, encodeBase64(url)]));
+  } catch (e) {
+    if (e instanceof UploadRequestError && e.status === 413) {
+      uploadError.value = `${file.name} is too large`;
+    } else if (e instanceof UploadRequestError && e.status === 422) {
+      uploadError.value = `${file.name} is not a valid Asset Administration Shell file`;
+    } else if (e instanceof UploadRequestError && e.status === 429) {
+      uploadError.value = 'Too many uploads, please wait a minute';
+    } else {
+      console.error(e);
+      uploadError.value = `${file.name} could not be uploaded`;
+    }
+  } finally {
+    uploading.value = false;
+    uploadInput.value!.value = '';
+  }
+}
+
+// Removing an uploaded file also deletes it on the server
+function onRemoveExternal(url: string) {
+  if (isUploadUrl(url)) {
+    deleteUpload(uploadIdFromUrl(url)).catch((e) => console.error(e));
+  }
+}
+
+function externalLabel(url: string) {
+  if (!isUploadUrl(url)) {
+    return url;
+  }
+  const info = uploadInfos[uploadIdFromUrl(url)];
+  if (!info) {
+    return 'Uploaded file';
+  }
+  const expires = new Date(info.expiresAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+  return `${info.filename} (uploaded, deleted on the server at ${expires})`;
+}
+
 const shells = computed(() => (showExternal.value ? Object.values(externalAssets.value) : descriptions?.value ?? []));
 </script>
 
@@ -119,29 +203,69 @@ const shells = computed(() => (showExternal.value ? Object.values(externalAssets
         <p v-else-if="!(deepSearch && deepSearchLoading)" class="text-center italic py-8">No shells match the search.</p>
       </template>
       <template v-else>
-        <div role="tablist" class="tabs tabs-lift" v-if="clients.hasAssetAdditionals">
-          <router-link role="tab" class="tab" :class="{'tab-active': !showExternal}" :to="updateQuery('assets', null)">Pre-loaded assets</router-link>
-          <router-link role="tab" class="tab" :class="{'tab-active': showExternal}" :to="updateQuery('assets', 'external')">External assets</router-link>
+        <div role="tablist" class="asset-tabs" v-if="clients.hasAssetAdditionals">
+          <router-link
+            role="tab"
+            class="asset-tab"
+            :class="{ 'asset-tab-active': !showExternal }"
+            :aria-selected="!showExternal"
+            :to="updateQuery('assets', null)"
+          >
+            Pre-loaded assets
+            <span class="asset-tab-count">{{ descriptions.length }}</span>
+          </router-link>
+          <router-link
+            role="tab"
+            class="asset-tab"
+            :class="{ 'asset-tab-active': showExternal }"
+            :aria-selected="showExternal"
+            :to="updateQuery('assets', 'external')"
+          >
+            External assets
+            <span class="asset-tab-count">{{ Object.keys(externalAssets).length }}</span>
+          </router-link>
         </div>
-        <div class="flex flex-col bg-base-200/30 px-2 border border-t-0 border-base-300" v-if="showExternal">
+        <div class="asset-tab-panel flex flex-col px-4 pb-2 border border-t-0 border-base-300" v-if="showExternal">
           <div class="alert alert-warning mt-2">
             <strong>This is a proof-of-concept!</strong> Do not load shells with classified information that may not become public. This demo was not developed with information security as a priority.
           </div>
           <div class="label py-2">
-            <span class="text-sm">Add a link to any <code>.aasx</code>, <code>.aas.json</code>, or <code>.aas.xml</code> and select its assets afterwards</span>
+            <span class="text-sm">
+              Add a link to any <code>.aasx</code>, <code>.aas.json</code>, or <code>.aas.xml</code><template v-if="uploadLimits">
+              or upload such a file (up to {{ formatMegabytes(uploadLimits.maxBytes) }}, kept on the server for
+              {{ retentionText }})</template> and select its assets afterwards
+            </span>
           </div>
-          <label class="input flex items-center gap-2">
-            <GlobeEuropeAfricaIcon class="w-6 h-6 opacity-70" />
-            <input type="url" class="grow peer" placeholder="https://..." v-model="externalUrl">
-            <router-link
-              class="btn btn-sm btn-primary p-2"
-              :disabled="externalUrl.length ? undefined : 'disabled'"
-              :to="updateQuery('preload', [...preload, encodeBase64(externalUrl)])"
-              @click="externalUrl = ''"
-            >
-              Load external assets
-            </router-link>
-          </label>
+          <div class="flex flex-wrap items-center gap-3">
+            <label class="input flex items-center gap-2 grow min-w-80">
+              <GlobeEuropeAfricaIcon class="w-6 h-6 opacity-70" />
+              <input type="url" class="grow peer" placeholder="https://..." v-model="externalUrl">
+              <router-link
+                class="btn btn-sm btn-primary p-2"
+                :disabled="externalUrl.length ? undefined : 'disabled'"
+                :to="updateQuery('preload', [...preload, encodeBase64(externalUrl)])"
+                @click="externalUrl = ''"
+              >
+                Load external assets
+              </router-link>
+            </label>
+            <template v-if="uploadLimits">
+              <span class="text-sm opacity-70">or</span>
+              <input
+                ref="uploadInput"
+                type="file"
+                class="hidden"
+                accept=".aasx,.json,.xml"
+                @change="onFileSelected"
+              >
+              <button type="button" class="btn btn-primary btn-outline" :disabled="uploading" @click="uploadInput?.click()">
+                <span v-if="uploading" class="loading loading-spinner loading-sm"></span>
+                <ArrowUpTrayIcon v-else class="w-5 h-5" />
+                Upload file
+              </button>
+            </template>
+          </div>
+          <p v-if="uploadError" class="text-error text-sm mt-2">{{ uploadError }}</p>
           <ul class="my-1">
             <li
               v-for="(asset, url) of externalShells"
@@ -158,17 +282,17 @@ const shells = computed(() => (showExternal.value ? Object.values(externalAssets
                 <CheckCircleIcon v-show="asset !== null && typeof asset === 'object'" class="w-full h-full -top-0.5 -left-0.5 absolute inset-0 z-10 bg-base-100 rounded-full animate-[ping-reverse_.3s_ease-in-out_forwards]" />
               </div>
               <span class="grow">
-                {{ url }}: <strong>{{ asset === null ? 'Loading...' : typeof asset === 'string' ? asset : 'Loaded. Select assets below' }}</strong>
+                {{ externalLabel(url as string) }}: <strong>{{ asset === null ? 'Loading...' : typeof asset === 'string' ? asset : 'Loaded. Select assets below' }}</strong>
               </span>
-              <router-link class="btn btn-outline btn-sm" :to="removeExternalUrlRoute(url as string)">
+              <router-link class="btn btn-outline btn-sm" :to="removeExternalUrlRoute(url as string)" @click="onRemoveExternal(url as string)">
                 {{ asset && typeof asset === 'object' ? 'Remove' : 'Hide' }}
               </router-link>
             </li>
           </ul>
         </div>
         <div
-          class="grid grid-cols-[repeat(auto-fill,minmax(15rem,1fr))] gap-4 p-4 bg-base-200/30 border border-base-300"
-          :class="{ 'border-t-0': clients.hasAssetAdditionals }"
+          class="grid grid-cols-[repeat(auto-fill,minmax(15rem,1fr))] gap-4 p-4 border border-base-300"
+          :class="clients.hasAssetAdditionals ? 'asset-tab-panel border-t-0' : 'bg-base-200/30'"
           v-if="shells.length"
         >
           <AssetGridCard v-for="shell in shells" :key="shell.globalAssetId" :shell="shell" />
@@ -183,3 +307,45 @@ const shells = computed(() => (showExternal.value ? Object.values(externalAssets
     </aside>
   </div>
 </template>
+
+<style scoped>
+@reference "@/assets/main.css";
+
+/*
+ * Tabs: the active tab has the colour of the panel below it and merges with it, inactive tabs stay in the page
+ * colour with muted text. The colour mix works for the light and the dark theme alike.
+ */
+.asset-tab-panel {
+  background-color: color-mix(in oklab, var(--color-base-200) 55%, var(--color-base-100));
+}
+
+.asset-tabs {
+  @apply flex items-end gap-1 border-b border-base-300;
+}
+
+.asset-tab {
+  @apply relative -mb-px flex items-center gap-2 px-5 py-2.5 rounded-t-sm border border-b-0 border-base-300
+    bg-base-100 text-base-content/60 transition-colors;
+
+  &:hover {
+    @apply text-base-content bg-base-200/60;
+  }
+}
+
+.asset-tab-active {
+  @apply text-base-content font-semibold;
+  background-color: color-mix(in oklab, var(--color-base-200) 55%, var(--color-base-100));
+  /* Coloured top edge; the bottom edge in panel colour covers the border of the tab list */
+  box-shadow:
+    inset 0 3px 0 var(--color-primary),
+    0 1px 0 color-mix(in oklab, var(--color-base-200) 55%, var(--color-base-100));
+
+  &:hover {
+    background-color: color-mix(in oklab, var(--color-base-200) 55%, var(--color-base-100));
+  }
+}
+
+.asset-tab-count {
+  @apply text-xs font-normal opacity-70;
+}
+</style>

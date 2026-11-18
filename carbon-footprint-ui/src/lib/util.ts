@@ -281,7 +281,7 @@ async function getAssetShell(aasIdentifierOrUrl: string, urlPrefix: string = "ur
   }
 }
 
-export async function loadFullAssetInfo(aasIdentifierOrUrl: string, idMap?: AssetIdMap, urlPrefix: string = "url-", onWarning: (msgTitle: string, msgDetails: string) => void = () => {}, simulationChanges?: SimulationChanges | string):
+export async function loadFullAssetInfo(aasIdentifierOrUrl: string, idMap?: AssetIdMap, urlPrefix: string = "url-", onWarning: (msgTitle: string, msgDetails: string, source?: string) => void = () => {}, simulationChanges?: SimulationChanges | string):
   Promise<{
     asset: Asset,
     submodelReferences: string[],
@@ -316,12 +316,13 @@ export async function loadFullAssetInfo(aasIdentifierOrUrl: string, idMap?: Asse
   // const cf = submodels.oneOrUndefined([IRI.CARBON_FOOTPRINT['0/9'], IRI.CARBON_FOOTPRINT['1/0']], "CarbonFootprint");
   let carbonFootprint;
   try {
-    carbonFootprint = cfs.length ? CarbonFootprint.fromIdTree(cfs) : undefined;
+    carbonFootprint = cfs.length ? CarbonFootprint.fromIdTree(cfs, description?.idShort || description?.name) : undefined;
   } catch (err) {
     console.warn(err, onWarning);
     onWarning(
       `Cannot parse Carbon Footprint for ${description?.name}`,
-      `Even though ${description?.name} (with id Short ${description?.idShort}) seems to provide a Carbon Footprint, it is not readable. Be vary when analysing the carbon footprints!`
+      `Even though ${description?.name} (with id Short ${description?.idShort}) seems to provide a Carbon Footprint, it is not readable. Be vary when analysing the carbon footprints!`,
+      description?.idShort || description?.name
     )
   }
   return {

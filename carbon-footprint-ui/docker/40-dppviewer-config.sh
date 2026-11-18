@@ -46,9 +46,17 @@ sed_escape() {
     printf '%s' "$1" | sed -e 's/[\\&|]/\\&/g'
 }
 
+# Grenze für Uploads: UPLOAD_MAX_MB (Standard 25) aufgerundet plus 1 MB für den Rahmen der Anfrage
+upload_max_mb=${UPLOAD_MAX_MB:-25}
+case "$upload_max_mb" in
+    ''|*[!0-9.]*) echo "dppviewer: UPLOAD_MAX_MB=$upload_max_mb ist keine Zahl" >&2; exit 1 ;;
+esac
+upload_body_limit="$(awk -v mb="$upload_max_mb" 'BEGIN { n = int(mb); if (n < mb) n++; print n + 1 }')m"
+
 sed -e "s|@CSP@|$(sed_escape "$csp")|" \
+    -e "s|@UPLOAD_BODY_LIMIT@|$upload_body_limit|" \
     -e "s|@API_UPSTREAM@|$(sed_escape "${API_UPSTREAM:-api:8080}")|" \
     -e "s|@DNS_RESOLVER@|$(sed_escape "${DNS_RESOLVER:-127.0.0.11}")|" \
     /etc/nginx/dppviewer/default.conf.template > /tmp/nginx/conf.d/default.conf
 
-echo "dppviewer: Konfiguration erzeugt (API: ${API_UPSTREAM:-api:8080}, Karten: $(origin "$tile_url"))"
+echo "dppviewer: Konfiguration erzeugt (API: ${API_UPSTREAM:-api:8080}, Karten: $(origin "$tile_url"), Uploads bis $upload_body_limit)"

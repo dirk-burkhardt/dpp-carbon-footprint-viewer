@@ -17,6 +17,7 @@ import type { components } from '@/lib/api/AssetAdministrationShellRepository'
 import GlobalContextMenuComponent from '@/components/GlobalContextMenuComponent.vue'
 import HelpBar from '@/components/HelpBar.vue'
 import { decodeBase64 } from '@/lib/encoding'
+import { isUploadUrl } from '@/lib/api/uploads'
 
 
 const router = useRouter();
@@ -78,7 +79,9 @@ watch(() => router.currentRoute.value.query.preload, (encodedUrls) => {
         externalShells.value[url] = assets;
       }
     }).catch((e) => {
-      if (e.status === 422) {
+      if (isUploadUrl(url) && e.status === 404) {
+        externalShells.value[url] = "The uploaded file is no longer available on the server (expired or server restarted). Please upload it again";
+      } else if (e.status === 422) {
         externalShells.value[url] = "The link does not point to a valid Asset Administration Shell";
       } else if (e.status === 404) {
         externalShells.value[url] = "The link does not points to a page which could not be found (404)";

@@ -6,6 +6,8 @@
  * rechts das zweite Asset. Wahlweise Absolutwerte (je Kennzahl zwei Balken) oder nur die Differenz (ein Balken
  * auf der Seite des Assets mit dem höheren Wert). Kategorien: Gesamt, Transport und Produkt je
  * Lebenszyklusphase. Gefahrstoffe und kritische Materialien sind im Prototyp nicht enthalten.
+ *
+ * Alternatively both bars of a row are drawn side by side in one direction (grouped bar chart).
  */
 import { useRoute } from 'vue-router'
 import { computed, inject, type Ref } from 'vue'
@@ -31,8 +33,12 @@ const infos = computedAsync(async () => {
     return undefined;
   }
   const { first, second } = route.params;
+  // Route already changed while leaving the view
+  if (typeof first !== 'string' || typeof second !== 'string') {
+    return undefined;
+  }
   const data = ([first as string, second as string] as const).map((a) => BackOnErrorHandler.bind(
-    loadFullAssetInfo(a, idMap.value, "url-", (title, details) => ErrorClient.warn(title, details), simulationFromRoute(route)),
+    loadFullAssetInfo(a, idMap.value, "url-", (title, details, source) => ErrorClient.warn(title, details, source ? { source } : undefined), simulationFromRoute(route)),
     (e) => e.status === 422
       ? "The URL to an asset is invalid or does not point to a valid asset"
       : "The assets could not be loaded for the comparison"
@@ -57,6 +63,8 @@ const missingData = computed(() => sides.value?.filter((s) => !s.carbon).map((s)
 // Darstellung
 const mode = storageRef<'absolute' | 'difference'>('compareMode', 'absolute');
 const scalePerRow = storageRef<boolean>('compareScalePerRow', false);
+// "opposed": bars grow in two directions around a zero line; "grouped": both bars side by side in one direction
+const layout = storageRef<'opposed' | 'grouped'>('compareLayout', 'opposed');
 
 type Row = { key: string, label: string, title?: string, group: string, a: number, b: number, strong?: boolean }
 const rows = computed<Row[]>(() => {
@@ -101,6 +109,11 @@ function widths(row: Row) {
   }
   const diff = row.a - row.b;
   return { a: diff > 0 ? (diff / max) * 100 : 0, b: diff < 0 ? (-diff / max) * 100 : 0 };
+}
+
+/** Bar width in the grouped layout; leaves room for the value label to the right of the longest bar */
+function groupedWidth(percentOfMax: number) {
+  return `calc(${percentOfMax}% - 9rem * ${percentOfMax / 100})`;
 }
 
 function format(value: number) {
@@ -182,6 +195,10 @@ const coverageDiffers = computed(() => {
         <button type="button" class="btn btn-sm join-item" :class="{ 'btn-primary': mode === 'absolute' }" @click="mode = 'absolute'">Absolute values</button>
         <button type="button" class="btn btn-sm join-item" :class="{ 'btn-primary': mode === 'difference' }" @click="mode = 'difference'">Difference</button>
       </div>
+      <div class="join" title="Arrangement of the bars">
+        <button type="button" class="btn btn-sm join-item" :class="{ 'btn-primary': layout === 'opposed' }" @click="layout = 'opposed'">Opposed bars</button>
+        <button type="button" class="btn btn-sm join-item" :class="{ 'btn-primary': layout === 'grouped' }" @click="layout = 'grouped'">Bars side by side</button>
+      </div>
       <label class="flex items-center gap-2 text-sm cursor-pointer" title="Each row uses its own scale, so small values become visible">
         <input v-model="scalePerRow" type="checkbox" class="toggle toggle-sm" />
         Scale each row separately
@@ -198,8 +215,8 @@ const coverageDiffers = computed(() => {
       so totals are only comparable to a limited extent.
     </p>
 
-    <!-- Diagramm -->
-    <div class="mt-4">
+    <!-- Diagramm: Balken in zwei Richtungen -->
+    <div class="mt-4" v-if="layout === 'opposed'">
       <template v-for="group of groups" :key="group.name">
         <h3 v-if="group.name !== 'Total'" class="text-center text-sm font-semibold mt-5 mb-1 opacity-80">{{ group.name }}</h3>
         <div
@@ -226,9 +243,46 @@ const coverageDiffers = computed(() => {
         </div>
       </template>
     </div>
+    <!-- Grouped bar chart: both assets per row next to each other, growing to the right -->
+    <div class="mt-4" v-else>
+      <template v-for="group of groups" :key="group.name">
+        <h3 v-if="group.name !== 'Total'" class="text-sm font-semibold mt-5 mb-1 opacity-80 grouped-heading">{{ group.name }}</h3>
+        <div
+          v-for="row of group.rows"
+          :key="row.key"
+          class="grid grid-cols-[12rem_1fr] items-center hover:bg-base-200/60 py-1"
+          :title="mode === 'difference' && row.a !== row.b ? `Difference ${format(Math.abs(row.a - row.b))} (${relative(row)})` : undefined"
+        >
+          <div class="text-right text-sm pr-3 truncate" :class="{ 'font-semibold': row.strong }" :title="row.title">{{ row.label }}</div>
+          <div class="flex flex-col justify-center gap-0.5 min-h-8 border-l border-base-content/40">
+            <template v-if="mode === 'absolute'">
+              <div class="flex items-center h-3.5">
+                <div class="h-full compare-a rounded-r-sm transition-all duration-300" :style="{ width: groupedWidth(widths(row).a) }"></div>
+                <span class="text-xs ml-2 whitespace-nowrap">{{ format(row.a) }}</span>
+              </div>
+              <div class="flex items-center h-3.5">
+                <div class="h-full compare-b rounded-r-sm transition-all duration-300" :style="{ width: groupedWidth(widths(row).b) }"></div>
+                <span class="text-xs ml-2 whitespace-nowrap">{{ format(row.b) }}</span>
+              </div>
+            </template>
+            <div v-else class="flex items-center h-5">
+              <div
+                class="h-full rounded-r-sm transition-all duration-300"
+                :class="row.a > row.b ? 'compare-a' : 'compare-b'"
+                :style="{ width: groupedWidth(Math.max(widths(row).a, widths(row).b)) }"
+              ></div>
+              <span v-if="row.a !== row.b" class="text-xs ml-2 whitespace-nowrap">
+                +{{ format(Math.abs(row.a - row.b)) }} {{ row.a > row.b ? sides[0].name : sides[1].name }}
+              </span>
+            </div>
+          </div>
+        </div>
+      </template>
+    </div>
     <p class="text-xs opacity-60 mt-4">
       <template v-if="mode === 'absolute'">Bars show the CO2eq of each asset. </template>
-      <template v-else>A bar points to the asset with the higher value and shows by how much it is higher. </template>
+      <template v-else-if="layout === 'opposed'">A bar points to the asset with the higher value and shows by how much it is higher. </template>
+      <template v-else>A bar in the colour of the asset with the higher value shows by how much it is higher. </template>
       <template v-if="scalePerRow">Each row is scaled separately, bar lengths can only be compared within a row.</template>
       <template v-else>All rows use the same scale.</template>
     </p>
@@ -241,5 +295,8 @@ const coverageDiffers = computed(() => {
 }
 .compare-b {
   background-color: #f28e2b;
+}
+.grouped-heading {
+  padding-left: 12.75rem;
 }
 </style>

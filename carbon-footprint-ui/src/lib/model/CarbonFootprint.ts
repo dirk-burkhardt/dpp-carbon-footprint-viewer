@@ -25,14 +25,31 @@ export function parseCarbonFootprintAddress(idTree: IdTree) {
 }
 
 
-export function toCarbonFootprintData(footprint: IdTree | IdTree[], carbonFootprint?: CarbonFootprintType) {
+/** Path of idShorts from the submodel down to ``tree``, e.g. "CarbonFootprint › TransportCarbonFootprint01" */
+function idShortPath(tree: IdTree): string {
+  const parts: string[] = [];
+  for (let node: IdTree | undefined = tree; node; node = node.parent) {
+    if (node.idShort) {
+      parts.unshift(node.idShort);
+    }
+  }
+  return parts.join(' › ');
+}
+
+/**
+ * Reads product and transport carbon footprints from one or more Carbon Footprint submodels.
+ * @param footprint submodel(s)
+ * @param carbonFootprint result to extend
+ * @param source name of the asset the submodels belong to, used to attribute warnings
+ */
+export function toCarbonFootprintData(footprint: IdTree | IdTree[], carbonFootprint?: CarbonFootprintType, source?: string) {
   carbonFootprint = carbonFootprint || {
     product: [],
     transport: [],
   }
   if (Array.isArray(footprint)) {
     for (const fp of footprint) {
-      toCarbonFootprintData(fp, carbonFootprint);
+      toCarbonFootprintData(fp, carbonFootprint, source);
     }
     return carbonFootprint;
   }
@@ -65,7 +82,8 @@ export function toCarbonFootprintData(footprint: IdTree | IdTree[], carbonFootpr
         if (!value) {
           ErrorClient.warn(
             'The asset does not specify whether its calculations encompass Well-to-Tank, Tank-to-Wheel, or both',
-            'The value of TCFProcessesForGreenhouseGasEmissionInATransportService does not exist, therefore the analysis handles the missing value as Well-to-Wheel'
+            'The value of TCFProcessesForGreenhouseGasEmissionInATransportService does not exist, therefore the analysis handles the missing value as Well-to-Wheel',
+            { source: source ?? 'Unknown asset', subject: idShortPath(tcf) }
           );
           console.warn("Value of TCFProcessesForGreenhouseGasEmissionInATransportService does not exist: Assuming multiple values and thus WTW");
           return "WTW - Well-to-Wheel";
@@ -127,7 +145,7 @@ export default class CarbonFootprint implements CarbonFootprintType {
     return this.productCo2eq + this.transportCo2eq;
   }
 
-  public static fromIdTree(idTree: IdTree | IdTree[]) {
-    return new CarbonFootprint(toCarbonFootprintData(idTree));
+  public static fromIdTree(idTree: IdTree | IdTree[], source?: string) {
+    return new CarbonFootprint(toCarbonFootprintData(idTree, undefined, source));
   }
 }

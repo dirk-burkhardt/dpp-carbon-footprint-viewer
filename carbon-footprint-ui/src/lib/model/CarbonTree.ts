@@ -339,6 +339,7 @@ export default class CarbonTree extends EventTarget implements CarbonTreeType<Ca
       ErrorClient.warn(
         "Mismatch between asset CO2eq and its components CO2eq",
         `The asset's (${this.displayNames[0]}) CO2eq is lower than the sum of its components CO2eqs. The sum of the components is used.`,
+        { source: this.displayNames[0] },
       )
       return originalChildrenProductCo2eq;
     }
@@ -355,6 +356,7 @@ export default class CarbonTree extends EventTarget implements CarbonTreeType<Ca
       ErrorClient.warn(
         "Mismatch between asset CO2eq and its components CO2eq",
         `The asset's (${this.displayNames[0]}) CO2eq is lower than the sum of its components CO2eqs. The sum of the components is used.`,
+        { source: this.displayNames[0] },
       )
       return childrenCo2eq - originalChildrenCo2eq;
     }

@@ -41,6 +41,10 @@ Vorrang.
 | | `CFA_EXTERNAL_MAX_BYTES` | Max. Größe heruntergeladener Dateien (Standard 50 MiB) |
 | | `CFA_EXTERNAL_TIMEOUT_SECONDS` | Zeitlimit für Downloads (Standard 30 s) |
 | | `CFA_EXTERNAL_MAX_CACHED` | Max. Anzahl gemerkter heruntergeladener Dateien (Standard 50) |
+| `--noUploads` | `CFA_UPLOADS_ENABLED=false` | Hochladen von Dateien abschalten |
+| `--uploadMaxMb` | `CFA_UPLOAD_MAX_MB` | Max. Größe einer hochgeladenen Datei in MB (Standard 25) |
+| `--uploadTtlHours` | `CFA_UPLOAD_TTL_HOURS` | Stunden, nach denen ein Upload gelöscht wird (Standard 3) |
+| | `CFA_UPLOAD_MAX_COUNT` | Max. Anzahl gleichzeitig gespeicherter Uploads, älteste fallen heraus (Standard 20) |
 | | `CFA_MAX_ENTRY_BYTES` | Max. entpackte Größe eines Eintrags im AASX (Standard 256 MiB) |
 | | `CFA_FORWARDED_ALLOW_IPS` | IPs von Reverse-Proxys, deren `X-Forwarded-*`-Header vertraut wird |
 
@@ -56,6 +60,10 @@ Vorrang.
 | `GET …/submodel-elements/{idShortPath}/attachment` | Datei eines File- oder Blob-Elements |
 | `GET /api/v4/shells/{id}/asset-information/thumbnail` | Vorschaubild |
 | `GET /api/v4/external-shells/{url}` | Shells aus einer Datei unter einer öffentlichen URL laden |
+| `GET /api/v4/uploads` | Ob Hochladen möglich ist, maximale Größe (`maxBytes`) und Aufbewahrung (`ttlSeconds`) |
+| `POST /api/v4/uploads?filename=…` | Datei (`.aasx`, `.aas.json`, `.aas.xml`) als Anfragekörper hochladen; Antwort mit `id`, `expiresAt` und den Shells. Nur im Arbeitsspeicher, gelöscht nach Ablauf, bei Überschreiten von `CFA_UPLOAD_MAX_COUNT` und bei jedem Neustart |
+| `GET /api/v4/uploads/{uploadId}` | Upload mit seinen Shells, 404 nach Ablauf |
+| `DELETE /api/v4/uploads/{uploadId}` | Upload vorzeitig löschen |
 | `GET /api/v4/asset/all`, `/asset/{id}/submodel/all`, `/asset/{id}/submodel/{smId}` | Varianten mit nicht codierten IDs |
 | `GET /api/v4/products/submodel-templates` | Unterstützte IDTA-Templates und Versionen |
 | `GET /api/v4/products/{id}/templates` | Erkanntes Template, Version und Variante jedes Submodels einer Shell |
@@ -149,11 +157,15 @@ tools/          record_snapshots.py zum Aufzeichnen der Referenzantworten
 - `/external-shells` ruft nur öffentliche http(s)-Adressen ab (kein localhost, keine privaten oder link-lokalen
   Netze, auch nicht über Weiterleitungen oder DNS-Rebinding), mit Größen- und Zeitlimit. Heruntergeladene
   Shells ersetzen nie vorhandene und werden nach dem LRU-Prinzip wieder entfernt.
+- `/uploads` nimmt Dateien bis `CFA_UPLOAD_MAX_MB` an und hält sie nur im Arbeitsspeicher (nichts wird auf
+  die Platte geschrieben). Jeder Upload erhält eine zufällige, nicht erratbare ID (144 bit); hochgeladene Shells
+  sind versteckt, ersetzen nie vorhandene und werden nach `CFA_UPLOAD_TTL_HOURS`, beim Überschreiten von
+  `CFA_UPLOAD_MAX_COUNT` und bei jedem Neustart gelöscht.
 - AASX-Dateien werden mit Größenlimit je Eintrag gelesen (Zip-Bomben), XML ohne Entitäten und DTD (XXE).
 - Attachments, die ein Browser ausführen könnte (HTML, SVG, XML, JavaScript), werden nur als Download mit
   `Content-Security-Policy: sandbox` ausgeliefert.
 - Sicherheits-Header (`X-Content-Type-Options`, `Referrer-Policy`, `X-Frame-Options`), kein `Server`-Header.
-- CORS nur für die API, nur `GET`, ohne Credentials. Standardmäßig bindet der Server nur an `127.0.0.1`.
+- CORS nur für die API, nur `GET` sowie `POST`/`DELETE` für Uploads, ohne Credentials. Standardmäßig bindet der Server nur an `127.0.0.1`.
 
 ## Entwicklung
 
@@ -183,46 +195,4 @@ passt.
 
 ## Changelog
 
-### 4.4.0 – 2026-11-15
-
-- Parser für Technical Data (ZVEI 1.0 bis Generic Frame 2.0.4), Handover Documentation (VDI 2770 1.0, 1.2, 2.0 bis 2.0.4) und Maintenance Instructions (1.0 bis 1.0.2) mit Endpunkten unter /products; ConceptDescriptions der Dateien werden gelesen und unter /concept-descriptions bereitgestellt; AAS-Metamodell 3.2 (createdAt/updatedAt, DataSpecificationUom) und AASX-Fallback auf data.xml/data.json
-- Kompatibilitätstests mit allen gültigen Beispielen der Metamodell-Releases 3.0.9, 3.1.2 und 3.2.0 (XML und JSON)
-  und den AASX-Beispielen 3.1/3.2
-- Prüfskript meldet auch neue Releases von aas-specs-metamodel und aas-specs-aasx
-
-### 4.3.0 – 2026-11-15
-
-- Neuer Endpunkt /search: Volltextsuche in allen Shells und Submodels
-
-### 4.2.0 – 2026-11-15
-
-- Versionsunabhängige Parser für IDTA-Submodels: Carbon Footprint 0.9, 1.0-Entwurf und 1.0 bis 1.0.3 (Metamodell 3.0/3.1) inkl. Battery-Passport-PCF, Digital Nameplate 1.0 bis 3.0.3, Contact Information, Hierarchical Structures 1.0/1.1; Erkennung von Handover Documentation und Technical Data
-- Neue Endpunkte unter `/api/v4/products`: erkannte Templates je Submodel, normalisierter Carbon Footprint mit
-  Zusammenfassung je Berechnungsmethode, Typenschild und Produktbaum über alle Shells
-- Wert-IRDIs aus ECLASS-Wertelisten werden in Text übersetzt; Submodels ohne SemanticId werden über den idShort
-  erkannt, leere Template-Kopien ignoriert
-- Tests gegen alle bekannten IDTA-Templates von GitHub (`tests/idta_templates.tar.gz`)
-
-### 4.1.0 – 2026-11-15
-
-- Betrieb als Docker-Container (python:3.13-slim, ohne Root-Rechte, schreibgeschütztes Dateisystem, Healthcheck über /api/health) mit docker-compose.yml; AASX-Dateien aus repo werden nach /opt/repo eingebunden
-
-### 4.0.0 – 2026-11-15
-
-- Neu implementiert in Python mit FastAPI als Ersatz der bisherigen Java-/Spring-Boot-Umsetzung; Antwortformat
-  unverändert, damit die Oberfläche weiter funktioniert
-- Inkompatibel: Präfix `/api/v4` statt `/api/v3.0`
-- Neu: `/api/health`, Konfiguration über Umgebungsvariablen `CFA_*`, Optionen `--host`, `--logLevel`, `--noDocs`,
-  `--noExternalShells`
-- Neu: IDs werden auch im Standard-Base64 (wie `btoa` im Browser) angenommen, auch mit `/` im codierten Wert
-- Sicherheit: SSRF-Schutz und Limits für `/external-shells`, keine Überschreibung vorhandener Shells durch Downloads,
-  begrenzter Cache, Größenlimit für AASX-Einträge, sichere Auslieferung aktiver Attachments, Sicherheits-Header,
-  CORS nur `GET` ohne Credentials, Standard-Bind auf `127.0.0.1`
-- Korrigiert: Elemente ohne `idShort` führten zu HTTP 500; AASX mit fehlerhafter Relation wurde nicht geladen;
-  unbekannte Shell bei Submodel- und Attachment-Abfragen liefert 404 statt 500; `--aas`-Dateien wurden doppelt
-  geladen; idShorts mit `/` im Pfad
-- Abhängigkeiten auf aktuellem Stand, ausschließlich freie Lizenzen (MIT, BSD, Apache-2.0, PSF)
-
-### 0.0.1
-
-- Ursprüngliche Umsetzung in Java (Spring Boot, Eclipse AAS4J) mit Präfix `/api/v3.0`
+Siehe [CHANGELOG.md](CHANGELOG.md).

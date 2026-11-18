@@ -28,6 +28,7 @@ import httpx2
 from .. import __version__
 from ..aas import AasObject, AasParseError, AssetType
 from ..repository import AssetRepository
+from .leases import HiddenShellLeases
 
 logger = logging.getLogger(__name__)
 
@@ -68,8 +69,11 @@ class ExternalShellService:
         allow_private_networks: bool = False,
         transport: Optional[httpx2.AsyncBaseTransport] = None,
         resolver: Resolver = _resolve,
+        leases: Optional[HiddenShellLeases] = None,
     ) -> None:
         self._repository = repository
+        # Shared with the upload service, so a shell contained in a download and an upload stays while one uses it
+        self._leases = leases or HiddenShellLeases(repository)
         self._max_bytes = max_bytes
         self._timeout = timeout_seconds
         self._max_cached = max_cached
@@ -105,10 +109,10 @@ class ExternalShellService:
         async with self._lock:
             self._cache[url] = ids
             self._cache.move_to_end(url)
+            self._leases.acquire(f"url:{url}", ids)
             while len(self._cache) > self._max_cached:
-                _, evicted = self._cache.popitem(last=False)
-                still_used = {i for other in self._cache.values() for i in other}
-                self._repository.remove_shells([i for i in evicted if i not in still_used], only_hidden=True)
+                evicted_url, _ = self._cache.popitem(last=False)
+                self._leases.release(f"url:{evicted_url}")
 
     async def _check_url(self, url: httpx2.URL) -> None:
         if url.scheme not in ("http", "https") or not url.host:

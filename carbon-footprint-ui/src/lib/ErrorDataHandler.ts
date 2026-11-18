@@ -33,7 +33,21 @@ export type ErrorDataHandler = {
    * stack trace of the error
    */
   trace?: string
+
+  /**
+   * Asset (shell) the problem belongs to, e.g. its idShort. Problems with a source are counted once per source
+   * and subject, so loading the same asset again does not increase the count.
+   */
+  source?: string
+
+  /**
+   * Element within the asset that causes the problem, e.g. the path of a submodel element
+   */
+  subject?: string
 }
+
+/** Where a warning comes from: the asset and the element within it */
+export type ProblemOrigin = Pick<ErrorDataHandler, 'source' | 'subject'>
 
 /**
  * ErrorClient handling errors from the beginning and making it able to show the UI even though an error might
@@ -118,9 +132,10 @@ export class ErrorClient {
    * Add a warning (a problem that does not prevent the display, e.g. incomplete data)
    * @param message short description
    * @param details further information
+   * @param origin asset and element the warning belongs to
    */
-  static warn (message: string, details?: string) {
-    ErrorClient.add({ message, details, level: 'warning' })
+  static warn (message: string, details?: string, origin?: ProblemOrigin) {
+    ErrorClient.add({ message, details, level: 'warning', ...origin })
   }
 
   /**

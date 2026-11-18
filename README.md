@@ -15,7 +15,49 @@ A public version is running at: https://dppviewer.policymodelling.com
 | `repo` | Beispiel- und Projektdateien (AASX), die die API beim Start lädt |
 | `tools` | Hilfsskripte für das Gesamtprojekt (Versionierung, Prüfung auf neue IDTA-Templates) |
 
-Die aktuellen Versionen stehen im Changelog der jeweiligen README und auf der About-Seite der Oberfläche.
+Die aktuellen Versionen stehen im jeweiligen `CHANGELOG.md` und auf der About-Seite der Oberfläche.
+
+## Schnellstart (Docker, lokal)
+
+Voraussetzungen: Docker mit Compose-Plugin (Docker Desktop unter Windows/macOS, Docker Engine unter Linux).
+
+```bash
+cp .env.example .env               # Windows: copy .env.example .env
+docker compose up -d --build       # Images bauen und beide Container starten
+docker compose ps                  # Status, die API meldet sich nach einigen Sekunden als healthy
+docker compose logs -f             # Protokolle verfolgen (Strg+C beendet nur die Anzeige)
+docker compose down                # beenden
+```
+
+Die API lädt die AASX-Dateien aus `repo` beim Start. Nach Änderungen dort genügt `docker compose restart api`,
+nach Änderungen am Quellcode `docker compose up -d --build`.
+
+In `.env` lassen sich anpassen (alle Angaben sind optional, siehe Kommentare in `.env.example`):
+
+| Variable | Standard | Bedeutung |
+|---|---|---|
+| `UI_PORT` | `5001` | Port auf dem Rechner, unter dem die Oberfläche erreichbar ist |
+| `API_LOG_LEVEL` | `INFO` | Protokollstufe der API |
+| `API_DOCS_ENABLED` | `true` | Swagger-Oberfläche und OpenAPI-Beschreibung bereitstellen |
+| `API_EXTERNAL_SHELLS_ENABLED` | `true` | Laden von AASX-Dateien über eine URL erlauben |
+| `UPLOADS_ENABLED` | `true` | Hochladen von AAS(X)-Dateien in der Oberfläche erlauben |
+| `UPLOAD_MAX_MB` | `25` | Maximale Größe einer hochgeladenen Datei in MB |
+| `UPLOAD_TTL_HOURS` | `3` | Stunden, nach denen hochgeladene Dateien gelöscht werden (spätestens beim Neustart der API) |
+| `MAP_TILE_URL`, `MAP_ATTRIBUTION`, `GEOCODING_URL` | leer | Kartenkacheln und Adresssuche, leer = OpenStreetMap/Nominatim, `GEOCODING_URL=off` schaltet die Adresssuche ab |
+
+Im Browser erreichbar (mit Standardport 5001):
+
+| Adresse | Inhalt |
+|---|---|
+| http://localhost:5001 | Oberfläche: Auswahl der Assets, Einzelansicht, Compare, Datasheet |
+| http://localhost:5001/about | Info-Seite mit den Versionen von Oberfläche und API |
+| http://localhost:5001/api/docs | Swagger-Oberfläche der API (nur mit `API_DOCS_ENABLED=true`) |
+| http://localhost:5001/api/openapi.json | OpenAPI-Beschreibung der API (nur mit `API_DOCS_ENABLED=true`) |
+| http://localhost:5001/api/health | Zustand der API mit Version und Anzahl geladener Shells |
+| http://localhost:5001/api/v4/shells | Beispiel eines fachlichen Endpunkts: alle geladenen Shells als JSON |
+
+Die API hat keinen eigenen Port nach außen, sie ist nur über die Oberfläche unter `/api` erreichbar. Eine
+Verwaltungsoberfläche gibt es nicht, Einstellungen erfolgen ausschließlich über `.env`.
 
 ## Schnellstart (Entwicklung)
 
@@ -55,7 +97,7 @@ python tools/bump_version.py api patch "Kurze Beschreibung der Änderung"
 python tools/bump_version.py ui minor "Kurze Beschreibung der Änderung"
 ```
 
-Das Skript setzt die Version und trägt die Änderung in den Changelog des Teils und in den Changelog unten ein.
+Das Skript setzt die Version und trägt die Änderung in das `CHANGELOG.md` des Teils und in das des Gesamtprojekts ein.
 Tests der API und der Build der Oberfläche prüfen, dass Version und Changelog zusammenpassen.
 
 | Oberfläche | benötigte API |
@@ -83,37 +125,4 @@ Apache License 2.0, siehe [LICENSE](LICENSE).
 
 ## Changelog
 
-### 2026-11-15
-
-- UI 1.2.5: Logo in der Kopfzeile mit dem Schriftzug „DPPviewer“ statt „CLiCE - DiPP“ (Datei src/assets/DPPviewer-logo.svg, Schrift Quicksand als Pfad)
-- UI 1.2.4: Favicon und App-Symbole zeigen das CLiCE-DiPP-Logo (Lupe mit Blatt-Etikett)
-- UI 1.2.4: Datasheet: lange Asset-Namen in der Kopfzeile werden gekürzt, der volle Name erscheint beim Überfahren
-- UI 1.2.3: Datasheet scrollt bei vielen Assets waagerecht, die linke Spalte mit den Bezeichnungen bleibt dabei stehen
-- UI 1.2.2: Datasheet zeigt alle Favoriten, auch ohne CO2-Daten (Zellen mit „no data“); ein nicht ladbares Asset blockiert nicht mehr das ganze Datasheet
-- UI 1.2.2: Favoritenbox: Compare und Datasheet mit Symbolen, durch Linien vom Titel abgesetzt; Favoriten in einem eigenen, helleren Bereich
-- UI 1.2.2: Statussymbol auf der Startseite rechts unten statt mittig unter den Favoriten
-- UI 1.2.2: Fehlertabelle standardmäßig etwa ein Drittel der Fensterhöhe, kompaktere Zeilen, Scrollen ohne Mitscrollen der Seite
-- UI 1.2.1: Karte der Übersicht schiebt sich beim Scrollen nicht mehr über die Kopfzeile
-- UI 1.2.1: Doppelte Auswahl „More“ (Components, Life Cycles, Simulation) samt Symbol unter der Einzelansicht entfernt, die Navigation links genügt
-- UI 1.2.1: Dunkelmodus: Beschriftungen und Linien der Diagramme in Overview, Components, Life Cycles und Simulation in der Schriftfarbe des Themas statt Schwarz; Adressfeld auf der Karte besser lesbar
-- UI 1.2.1: Fehlertabelle höher (45 % der Fensterhöhe), am oberen Rand in der Höhe verstellbar, größere Schrift
-- UI 1.2.1: Abweichende Berechnungen (CO2eq der Komponenten höher als das des Assets, fehlende Angabe Well-to-Tank/Tank-to-Wheel) erscheinen als Warnung statt als Fehler
-- API 4.4.0: Parser für Technical Data (ZVEI 1.0 bis Generic Frame 2.0.4), Handover Documentation (VDI 2770 1.0, 1.2, 2.0 bis 2.0.4) und Maintenance Instructions (1.0 bis 1.0.2) mit Endpunkten unter /products; ConceptDescriptions der Dateien werden gelesen und unter /concept-descriptions bereitgestellt; AAS-Metamodell 3.2 (createdAt/updatedAt, DataSpecificationUom) und AASX-Fallback auf data.xml/data.json
-- UI 1.2.0: Neue Gestaltung: Kopfzeile mit Logo, Suche (optional innerhalb der Schalen), Hell/Dunkel und Info; linke Spalte entfällt
-- UI 1.2.0: Favoriten per Drag-and-drop sortierbar, in der Favoritenbox die Analysen Compare (die ersten beiden Favoriten) und Datasheet (alle Favoriten); bisherige Favoriten werden übernommen
-- UI 1.2.0: Compare als grafischer Vergleich zweier Assets nach dem Konzept der Thesis (Balken in zwei Richtungen um eine Nulllinie, Absolutwerte oder Differenz, Transport und Produkt je Lebenszyklusphase)
-- UI 1.2.0: Datasheet ohne eigenes Hinzufügen von Schalen, kompakteres Layout; Summe der Lebenszyklusphasen aus Komponenten korrigiert (Stückzahlen wurden teils doppelt bzw. gar nicht berücksichtigt)
-- UI 1.2.0: Klick auf eine Schale öffnet die Einzelansicht, die Auswahlschaltflächen beim Überfahren entfallen; gelber Rahmen nur noch bei Favoriten
-- UI 1.2.0: Statussymbol (OK, Warnungen, Fehler mit Anzahl) unter den Favoriten, auf anderen Seiten unten rechts; Klick öffnet eine kompakte Tabelle, gleiche Meldungen werden zusammengefasst
-- UI 1.2.0: Globale Fehlermeldung oben entfernt: Ladefehler erscheinen nur noch in der betroffenen Ansicht, auch wenn die Anfrage erst nach einem Seitenwechsel scheitert
-- API 4.3.0: Neuer Endpunkt /search: Volltextsuche in allen Shells und Submodels
-- API 4.2.0: Versionsunabhängige Parser für IDTA-Submodels: Carbon Footprint 0.9, 1.0-Entwurf und 1.0 bis 1.0.3 (Metamodell 3.0/3.1) inkl. Battery-Passport-PCF, Digital Nameplate 1.0 bis 3.0.3, Contact Information, Hierarchical Structures 1.0/1.1; Erkennung von Handover Documentation und Technical Data
-- Prüfskript `tools/check_idta_templates.py` für neue Versionen der IDTA-Submodel-Templates auf GitHub; Hinweis in `CLAUDE.md`, es zu Beginn jeder Arbeitssitzung auszuführen
-- UI 1.1.0: Betrieb als Docker-Container mit nginx: Weiterleitung von /api an die API, Laufzeitkonfiguration und Content-Security-Policy aus Umgebungsvariablen, Sicherheits-Header, Caching, Begrenzung der Downloads über URLs; Adresssuche mit GEOCODING_URL=off abschaltbar
-- API 4.1.0: Betrieb als Docker-Container (python:3.13-slim, ohne Root-Rechte, schreibgeschütztes Dateisystem, Healthcheck über /api/health) mit docker-compose.yml; AASX-Dateien aus repo werden nach /opt/repo eingebunden
-- API 4.0.0: Neuimplementierung in Python (FastAPI) mit Präfix `/api/v4`, Konfiguration über Umgebungsvariablen,
-  Sicherheitsüberarbeitung
-- UI 1.0.0: umbenannt in `carbon-footprint-ui`, Leaflet/OpenStreetMap statt Mapbox, CLiCE-DiPP-Logo, aktuelle
-  Bibliotheken, zahlreiche Fehlerbehebungen, Versionsanzeige
-- Projekt aufgeräumt: Java-Umsetzung der API und alter Frontend-Ordner `carbon-trace-main` entfernt, Versionierung
-  und Changelogs eingeführt
+Alle Änderungen stehen in [CHANGELOG.md](CHANGELOG.md), die Einzelheiten je Teil in den Changelogs von [API](carbon-footprint-api/CHANGELOG.md) und [Oberfläche](carbon-footprint-ui/CHANGELOG.md).

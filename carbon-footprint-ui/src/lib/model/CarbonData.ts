@@ -35,6 +35,8 @@ export default class CarbonData {
   }
 
   private async loadShell(aasIdentifier: string) {
+    // Name of the asset for warnings about its carbon footprint
+    const source = await Shells.shell(aasIdentifier).then((s) => s.idShort || aasIdentifier, () => aasIdentifier);
     for await (const cf of Shells.submodelsBySemanticId(aasIdentifier, [ IRI.CARBON_FOOTPRINT['0/9'], IRI.CARBON_FOOTPRINT['1/0'] ])) {
       if (!(aasIdentifier in this.footprintsById)) {
         this.footprintsById[aasIdentifier] = {
@@ -42,7 +44,7 @@ export default class CarbonData {
           transport: [],
         };
       }
-      toCarbonFootprintData(new IdTree(cf), this.footprintsById[aasIdentifier]);
+      toCarbonFootprintData(new IdTree(cf), this.footprintsById[aasIdentifier], source);
     }
     return Promise.all([
       Shells.shell(aasIdentifier).then((d) => {

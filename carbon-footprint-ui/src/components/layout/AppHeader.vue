@@ -23,7 +23,11 @@ function onSearchInput() {
 </script>
 
 <template>
-  <header class="sticky top-0 z-[60] h-14 flex items-center gap-4 px-4 bg-base-100 border-b border-base-300">
+  <!-- Only the asset selection keeps the header (and its search) in view; analyses scroll it away -->
+  <header
+    class="top-0 z-[60] h-14 flex items-center gap-4 px-4 bg-base-100 border-b border-base-300"
+    :class="{ sticky: router.currentRoute.value.name === 'home' }"
+  >
     <router-link to="/" title="Asset selection" class="shrink-0">
       <img
         :src="LogoSVG"

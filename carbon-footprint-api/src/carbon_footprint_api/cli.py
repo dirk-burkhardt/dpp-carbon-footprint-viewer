@@ -56,6 +56,13 @@ def _parser() -> argparse.ArgumentParser:
         action="store_false",
         help="Disable downloading shells from urls (/external-shells)",
     )
+    p.add_argument(
+        "--noUploads", dest="uploads_enabled", action="store_false", help="Disable temporary uploads (/uploads)"
+    )
+    p.add_argument("--uploadMaxMb", dest="upload_max_mb", type=float, help="Max. size of an uploaded file in MB")
+    p.add_argument(
+        "--uploadTtlHours", dest="upload_ttl_hours", type=float, help="Hours after which an upload is deleted"
+    )
     return p
 
 

@@ -5,7 +5,7 @@
 import { computed, onUnmounted, ref } from 'vue'
 import { storageRef } from '@/lib/storage'
 import { ExclamationTriangleIcon, XCircleIcon, XMarkIcon } from '@heroicons/vue/24/outline'
-import { clearProblems, problemPanelOpen, problems, removeProblem, type Problem } from '@/lib/problems'
+import { clearProblems, problemPanelOpen, problemSources, problems, removeProblem, type Problem } from '@/lib/problems'
 
 const expanded = ref<Problem | undefined>()
 
@@ -38,6 +38,27 @@ onUnmounted(stopResize)
 function time(date: Date) {
   return date.toLocaleTimeString()
 }
+
+// Affected assets in the table row; the expanded row lists every occurrence
+const MAX_SOURCES = 3
+function sourcesLabel(problem: Problem) {
+  const sources = problemSources(problem)
+  const shown = sources.slice(0, MAX_SOURCES).join(', ')
+  return sources.length > MAX_SOURCES ? `${shown} and ${sources.length - MAX_SOURCES} more` : shown
+}
+
+function hasDetails(problem: Problem) {
+  return Boolean(problem.details || problem.trace || problem.occurrences.length)
+}
+
+// Details shared by all occurrences are shown once above the list
+function commonDetails(problem: Problem) {
+  if (!problem.occurrences.length) {
+    return problem.details
+  }
+  const details = new Set(problem.occurrences.map((o) => o.details))
+  return details.size === 1 ? [...details][0] : undefined
+}
 </script>
 
 <template>
@@ -67,6 +88,7 @@ function time(date: Date) {
             <th class="w-6"></th>
             <th class="w-10 text-right">Count</th>
             <th>Message</th>
+            <th class="w-1/4">Asset</th>
             <th class="w-24">Time</th>
             <th class="w-6"></th>
           </tr>
@@ -78,12 +100,13 @@ function time(date: Date) {
                 <XCircleIcon v-if="problem.level === 'error'" class="h-4 text-error" />
                 <ExclamationTriangleIcon v-else class="h-4 text-warning" />
               </td>
-              <td class="text-right">{{ problem.count }}</td>
+              <td class="text-right" :title="problem.occurrences.length ? 'Number of affected elements' : 'Number of times the problem occurred'">{{ problem.count }}</td>
               <td>
                 <code v-if="problem.status" class="mr-1">{{ problem.status }}</code>
                 {{ problem.message }}
-                <span v-if="problem.details && expanded !== problem" class="opacity-60 truncate"> &ndash; {{ problem.details }}</span>
+                <span v-if="commonDetails(problem) && expanded !== problem" class="opacity-60 truncate"> &ndash; {{ commonDetails(problem) }}</span>
               </td>
+              <td class="truncate max-w-0" :title="problemSources(problem).join('\n')">{{ sourcesLabel(problem) }}</td>
               <td class="whitespace-nowrap">{{ time(problem.lastTimestamp) }}</td>
               <td>
                 <button type="button" class="opacity-50 hover:opacity-100" title="Remove" @click.stop="removeProblem(problem)">
@@ -91,11 +114,20 @@ function time(date: Date) {
                 </button>
               </td>
             </tr>
-            <tr v-if="expanded === problem && (problem.details || problem.trace)">
+            <tr v-if="expanded === problem && hasDetails(problem)">
               <td></td>
               <td></td>
-              <td colspan="3">
-                <p v-if="problem.details" class="whitespace-pre-wrap">{{ problem.details }}</p>
+              <td colspan="4">
+                <p v-if="commonDetails(problem)" class="whitespace-pre-wrap">{{ commonDetails(problem) }}</p>
+                <table v-if="problem.occurrences.length" class="mt-1 text-sm">
+                  <tbody>
+                    <tr v-for="(o, j) of problem.occurrences" :key="j">
+                      <td class="pr-4 py-0.5 align-top whitespace-nowrap">{{ o.source }}</td>
+                      <td class="pr-4 py-0.5 align-top opacity-70">{{ o.subject ?? '' }}</td>
+                      <td v-if="!commonDetails(problem)" class="py-0.5 align-top">{{ o.details }}</td>
+                    </tr>
+                  </tbody>
+                </table>
                 <pre v-if="problem.trace" class="whitespace-pre-wrap text-xs opacity-70">{{ problem.trace }}</pre>
               </td>
             </tr>
