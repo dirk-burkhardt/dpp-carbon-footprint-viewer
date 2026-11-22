@@ -59,13 +59,14 @@ const shellsById = computed(() => Object.fromEntries(allShells.value.map((s) => 
 
 // Suche über den Header
 const searching = computed(() => searchText.value.trim().length > 0);
-const searchResult = computed(() => {
+/** Search results within the given shells (one tab), matches in name or ID first */
+function searchIn(list: ShellDescriptionSmallInterface[]) {
   if (!searching.value) {
     return [];
   }
   const needle = searchText.value.trim().toLowerCase();
   const attrs = ["id", "name", "globalAssetId", "idShort", "description"] as const;
-  return allShells.value
+  return list
     .map((shell) => ({
       shell,
       nameMatch: attrs.some((a) => shell[a]?.toLowerCase().includes(needle)),
@@ -74,7 +75,15 @@ const searchResult = computed(() => {
     .filter((r) => r.nameMatch || r.deepHit)
     // Treffer in Name oder ID zuerst
     .sort((a, b) => Number(b.nameMatch) - Number(a.nameMatch));
-})
+}
+const preloadedResults = computed(() => searchIn(descriptions?.value ?? []));
+const externalResults = computed(() => searchIn(Object.values(externalAssets.value)));
+// The tabs stay while searching: their counts show the matches, the open tab lists its own matches only
+const searchResult = computed(() => (showExternal.value ? externalResults.value : preloadedResults.value));
+const otherTabResults = computed(() => (showExternal.value ? preloadedResults.value : externalResults.value).length);
+const tabCount = (external: boolean) => searching.value
+  ? (external ? externalResults.value : preloadedResults.value).length
+  : (external ? Object.keys(externalAssets.value).length : descriptions?.value?.length ?? 0);
 
 // Fundstellen innerhalb der Schale; passt schon der Name, sind Treffer in den Shell-Angaben selbst überflüssig
 function matchLabel(hit: DeepSearchHit, nameMatch: boolean) {
@@ -190,33 +199,19 @@ const shells = computed(() => (showExternal.value ? Object.values(externalAssets
 
 <template>
   <div class="flex">
-    <div class="grow min-w-0 px-6 py-4" v-if="descriptions">
-      <template v-if="searching">
-        <div class="flex items-center gap-4 mb-3">
-          <h2 class="text-lg">
-            {{ searchResult.length }} {{ searchResult.length === 1 ? 'shell matches' : 'shells match' }}
-            <span class="opacity-70">&bdquo;{{ searchText.trim() }}&ldquo;</span>
-          </h2>
-          <span v-if="deepSearch && deepSearchLoading" class="loading loading-spinner loading-sm"></span>
-          <span v-else-if="!deepSearch" class="text-sm opacity-70">Only names and IDs were searched. Turn on &bdquo;Search inside shells&ldquo; to search their contents.</span>
-          <span class="grow"></span>
-          <button class="btn btn-sm" @click="searchText = ''">Clear search</button>
-        </div>
-        <div class="grid grid-cols-[repeat(auto-fill,minmax(15rem,1fr))] gap-4 pb-4" v-if="searchResult.length > 0">
-          <AssetGridCard v-for="r of searchResult" :key="r.shell.globalAssetId" :shell="r.shell">
-            <div v-if="r.deepHit && matchLabel(r.deepHit, r.nameMatch).length" class="text-xs border-t border-base-300 pt-2 mt-1 space-y-1">
-              <div v-for="(m, i) of matchLabel(r.deepHit, r.nameMatch)" :key="i" class="break-words">
-                <span class="opacity-60">{{ m.where }}:</span> {{ m.text }}
-              </div>
-              <div v-if="r.deepHit.total > r.deepHit.matches.length" class="opacity-60">
-                and {{ r.deepHit.total - r.deepHit.matches.length }} more
-              </div>
-            </div>
-          </AssetGridCard>
-        </div>
-        <p v-else-if="!(deepSearch && deepSearchLoading)" class="text-center italic py-8">No shells match the search.</p>
-      </template>
-      <template v-else>
+    <div class="grow min-w-0 px-3 md:px-6 py-4" v-if="descriptions">
+      <div v-if="searching" class="flex flex-wrap items-center gap-4 mb-3">
+        <h2 class="text-lg">
+          {{ searchResult.length }} {{ searchResult.length === 1 ? 'shell matches' : 'shells match' }}
+          <span class="opacity-70">&bdquo;{{ searchText.trim() }}&ldquo;</span>
+          <span v-if="clients.hasAssetAdditionals" class="text-sm opacity-70">in {{ showExternal ? 'external' : 'pre-loaded' }} assets</span>
+        </h2>
+        <span v-if="deepSearch && deepSearchLoading" class="loading loading-spinner loading-sm"></span>
+        <span v-else-if="!deepSearch" class="text-sm opacity-70">Only names and IDs were searched. Turn on &bdquo;Search inside shells&ldquo; to search their contents.</span>
+        <span class="grow"></span>
+        <button class="btn btn-sm" @click="searchText = ''">Clear search</button>
+      </div>
+      <template v-if="descriptions">
         <div role="tablist" class="asset-tabs" v-if="clients.hasAssetAdditionals">
           <router-link
             role="tab"
@@ -226,7 +221,7 @@ const shells = computed(() => (showExternal.value ? Object.values(externalAssets
             :to="updateQuery('assets', null)"
           >
             Pre-loaded assets
-            <span class="asset-tab-count">{{ descriptions.length }}</span>
+            <span class="asset-tab-count">{{ tabCount(false) }}</span>
           </router-link>
           <router-link
             role="tab"
@@ -236,7 +231,7 @@ const shells = computed(() => (showExternal.value ? Object.values(externalAssets
             :to="updateQuery('assets', 'external')"
           >
             External assets
-            <span class="asset-tab-count">{{ Object.keys(externalAssets).length }}</span>
+            <span class="asset-tab-count">{{ tabCount(true) }}</span>
           </router-link>
         </div>
         <div class="asset-tab-panel flex flex-col px-4 pb-2 border border-t-0 border-base-300" v-if="showExternal">
@@ -251,7 +246,7 @@ const shells = computed(() => (showExternal.value ? Object.values(externalAssets
             </span>
           </div>
           <div class="flex flex-wrap items-center gap-3">
-            <label class="input flex items-center gap-2 grow min-w-80">
+            <label class="input flex items-center gap-2 grow w-full md:w-auto md:min-w-80">
               <GlobeEuropeAfricaIcon class="w-6 h-6 opacity-70" />
               <input type="url" class="grow peer" placeholder="https://..." v-model="externalUrl">
               <router-link
@@ -307,13 +302,35 @@ const shells = computed(() => (showExternal.value ? Object.values(externalAssets
         <div
           class="grid grid-cols-[repeat(auto-fill,minmax(15rem,1fr))] gap-4 p-4 border border-base-300"
           :class="clients.hasAssetAdditionals ? 'asset-tab-panel border-t-0' : 'bg-base-200/30'"
-          v-if="shells.length"
+          v-if="searching ? searchResult.length : shells.length"
         >
-          <AssetGridCard v-for="shell in shells" :key="shell.globalAssetId" :shell="shell" />
+          <template v-if="searching">
+            <AssetGridCard v-for="r of searchResult" :key="r.shell.globalAssetId" :shell="r.shell">
+              <div v-if="r.deepHit && matchLabel(r.deepHit, r.nameMatch).length" class="text-xs border-t border-base-300 pt-2 mt-1 space-y-1">
+                <div v-for="(m, i) of matchLabel(r.deepHit, r.nameMatch)" :key="i" class="break-words">
+                  <span class="opacity-60">{{ m.where }}:</span> {{ m.text }}
+                </div>
+                <div v-if="r.deepHit.total > r.deepHit.matches.length" class="opacity-60">
+                  and {{ r.deepHit.total - r.deepHit.matches.length }} more
+                </div>
+              </div>
+            </AssetGridCard>
+          </template>
+          <template v-else>
+            <AssetGridCard v-for="shell in shells" :key="shell.globalAssetId" :shell="shell" />
+          </template>
         </div>
+        <p
+          v-else-if="searching && !(deepSearch && deepSearchLoading)"
+          class="text-center italic py-8 border border-base-300"
+          :class="clients.hasAssetAdditionals ? 'asset-tab-panel border-t-0' : ''"
+        >
+          No shells in this tab match the search<template v-if="otherTabResults">, but {{ otherTabResults }} in the other tab</template>.
+        </p>
       </template>
     </div>
-    <aside class="w-80 2xl:w-96 shrink-0 sticky top-14 h-[calc(100vh-3.5rem)] flex flex-col">
+    <!-- Favourites, Compare and Datasheet need a large screen; on small screens only the asset list is shown -->
+    <aside class="hidden md:flex w-80 2xl:w-96 shrink-0 sticky top-14 h-[calc(100vh-3.5rem)] flex-col">
       <FavoritesBox class="grow min-h-0" :shells-by-id="shellsById" />
       <div class="shrink-0 flex items-center justify-end px-4 py-3 border-l border-t border-base-300 bg-base-200/60">
         <StatusIndicator small />
@@ -338,7 +355,7 @@ const shells = computed(() => (showExternal.value ? Object.values(externalAssets
 }
 
 .asset-tab {
-  @apply relative -mb-px flex items-center gap-2 px-5 py-2.5 rounded-t-sm border border-b-0 border-base-300
+  @apply relative -mb-px flex items-center gap-2 px-3 md:px-5 py-2.5 rounded-t-sm border border-b-0 border-base-300
     bg-base-100 text-base-content/60 transition-colors;
 
   &:hover {

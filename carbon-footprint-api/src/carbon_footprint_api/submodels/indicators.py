@@ -193,8 +193,41 @@ def _match(quantity: str, prop: TechnicalProperty) -> tuple[int, Optional[str]] 
     return None
 
 
+# Cylinders and axes (e.g. Festo) state the mass for stroke 0 and the additional mass per stroke length
+_BASE_MASS = re.compile(r"^(basic|base) (weight|mass)( for 0 mm stroke)?$")
+_STROKE_MASS = re.compile(r"^additional (weight|mass) per (\d+(?:\.\d+)?) mm( of)? stroke$")
+
+
+def _stroke_dependent_mass(technical_data: list[TechnicalData]) -> Optional[Measure]:
+    """Mass = basic weight at stroke 0 + stroke / step × additional weight per step."""
+    base = increment = stroke = None
+    step = 0.0
+    for td, prop in _candidates(technical_data):
+        name = normalize_name(prop.idShort or prop.name)
+        number, unit = _value_and_unit(prop, None)
+        if number is None:
+            continue
+        if _BASE_MASS.match(name) and _factor("mass", unit):
+            base = (td, prop, number * _factor("mass", unit))  # type: ignore[operator]
+        elif (match := _STROKE_MASS.match(name)) and _factor("mass", unit):
+            increment = (prop, number * _factor("mass", unit))  # type: ignore[operator]
+            step = float(match.group(2))
+        elif name == "stroke" and _factor("length", unit):
+            stroke = (prop, number * _factor("length", unit) * 1000)  # type: ignore[operator]  # in mm
+    if base is None or increment is None or stroke is None or step <= 0:
+        return None
+    td, base_prop, base_kg = base
+    value = base_kg + stroke[1] / step * increment[1]
+    source = _source(td, base_prop, None)
+    source.derivation = (
+        f"{base_prop.idShort} ({base_prop.value}) + {stroke[0].idShort} ({stroke[0].value}) / {step:g} mm × "
+        f"{increment[0].idShort} ({increment[0].value})"
+    )
+    return Measure(value=value, unit="kg", source=source)
+
+
 def derive_indicators(technical_data: list[TechnicalData]) -> Indicators:
-    result = Indicators()
+    result = Indicators(technicalDataFound=bool(technical_data))
     for quantity, kind in _KIND.items():
         found: list[tuple[int, Measure]] = []
         for td, prop in _candidates(technical_data):
@@ -217,6 +250,8 @@ def derive_indicators(technical_data: list[TechnicalData]) -> Indicators:
             result.warnings.append(
                 f"Mehrere Angaben für {quantity}: verwendet {best.source.idShort} ({best.source.value})"
             )
+    if result.mass is None:
+        result.mass = _stroke_dependent_mass(technical_data)
     if result.width and result.height and result.depth:
         result.volume = result.width.value * result.height.value * result.depth.value
     for td, prop in _candidates(technical_data):

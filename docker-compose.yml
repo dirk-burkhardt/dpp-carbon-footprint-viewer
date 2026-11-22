@@ -1,12 +1,12 @@
-# DPPviewer: API und Oberfläche als getrennte Container.
+# DPPviewer: API and user interface as separate containers.
 #
-#   docker compose up -d --build     bauen und starten, danach http://localhost:5001
-#   docker compose logs -f           Protokolle verfolgen
-#   docker compose restart api       nach Änderungen im Ordner repo (Dateien werden beim Start geladen)
-#   docker compose down              beenden
+#   docker compose up -d --build     build and start, then http://localhost:5001
+#   docker compose logs -f           follow the logs
+#   docker compose restart api       after changes in the folder repo (files are loaded on startup)
+#   docker compose down              stop
 #
-# Einstellungen (Port, Karten- und Geocoding-Dienste) in einer Datei .env neben dieser Datei, siehe .env.example.
-# Die Image-Versionen werden von tools/bump_version.py gepflegt.
+# Settings (port, uploads, map and geocoding services) in a file .env next to this file, see .env.example.
+# The image versions are maintained by tools/bump_version.py.
 
 name: dppviewer
 
@@ -26,27 +26,27 @@ services:
     build:
       context: ./carbon-footprint-api
       args:
-        VERSION: "4.8.0"
-    image: dppviewer-api:4.8.0
+        VERSION: "4.9.0"
+    image: dppviewer-api:4.9.0
     environment:
       CFA_AASX: /opt/repo/*.aasx
       CFA_LOG_LEVEL: ${API_LOG_LEVEL:-INFO}
       CFA_DOCS_ENABLED: ${API_DOCS_ENABLED:-true}
       CFA_EXTERNAL_SHELLS_ENABLED: ${API_EXTERNAL_SHELLS_ENABLED:-true}
-      # Hochgeladene Dateien liegen in repo/uploads und werden nach Ablauf und bei jedem Neustart gelöscht
+      # Uploaded files are stored in repo/uploads and deleted after expiry and on every restart
       CFA_UPLOADS_ENABLED: ${UPLOADS_ENABLED:-true}
       CFA_UPLOAD_DIR: /opt/repo/uploads
       CFA_UPLOAD_MAX_MB: ${UPLOAD_MAX_MB:-25}
       CFA_UPLOAD_TTL_HOURS: ${UPLOAD_TTL_HOURS:-3}
-      # Die API ist nur über den UI-Container erreichbar, dessen Weiterleitungs-Header gelten
+      # The API is only reachable through the UI container, whose forwarding headers are trusted
       CFA_FORWARDED_ALLOW_IPS: "*"
     volumes:
       - ./repo:/opt/repo:ro
-      # Einziger beschreibbarer Ordner; unter Linux muss er dem Benutzer 10001 des Containers gehören
+      # Only writable folder; on Linux it must belong to the user 10001 of the container
       - ./repo/uploads:/opt/repo/uploads
     networks:
       - backend
-    # Kein Port nach außen: Zugriff nur über die Oberfläche (/api), Swagger unter /api/docs
+    # No port to the outside: access only through the user interface (/api), Swagger under /api/docs
     deploy:
       resources:
         limits:
@@ -57,8 +57,8 @@ services:
     build:
       context: ./carbon-footprint-ui
       args:
-        VERSION: "1.6.0"
-    image: dppviewer-ui:1.6.0
+        VERSION: "1.8.1"
+    image: dppviewer-ui:1.8.1
     depends_on:
       api:
         condition: service_healthy

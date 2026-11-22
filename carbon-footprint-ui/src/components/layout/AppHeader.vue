@@ -9,6 +9,7 @@ import LogoSVG from '@/assets/DPPviewer-logo.svg'
 import { darkModeKey } from '@/lib/injectionKeys'
 import { deepSearch, deepSearchLoading, searchText } from '@/lib/search'
 import AboutContent from '@/components/AboutContent.vue'
+import { isMobile } from '@/lib/viewport'
 
 const router = useRouter()
 const useDarkTheme = inject<Ref<boolean>>(darkModeKey)
@@ -25,14 +26,14 @@ function onSearchInput() {
 <template>
   <!-- Only the asset selection keeps the header (and its search) in view; analyses scroll it away -->
   <header
-    class="top-0 z-[60] h-14 flex items-center gap-4 px-4 bg-base-100 border-b border-base-300"
+    class="top-0 z-[60] h-14 flex items-center gap-2 md:gap-4 px-2 md:px-4 bg-base-100 border-b border-base-300"
     :class="{ sticky: router.currentRoute.value.name === 'home' }"
   >
     <router-link to="/" title="Asset selection" class="shrink-0">
       <img
         :src="LogoSVG"
         alt="DPPviewer logo"
-        class="h-10"
+        class="h-8 md:h-10"
         :class="{ 'bg-white/90 rounded-sm p-0.5': useDarkTheme }"
       />
     </router-link>
@@ -43,14 +44,14 @@ function onSearchInput() {
         v-model="searchText"
         type="search"
         class="grow min-w-0"
-        :placeholder="deepSearch ? 'Search asset administration shells and their contents' : 'Search asset administration shells'"
+        :placeholder="isMobile ? 'Search' : deepSearch ? 'Search asset administration shells and their contents' : 'Search asset administration shells'"
         @input="onSearchInput"
       />
       <span v-if="deepSearch && deepSearchLoading" class="loading loading-spinner loading-xs opacity-60"></span>
       <button v-if="searchText" type="button" class="opacity-60 hover:opacity-100" title="Clear search" @click="searchText = ''">
         <XMarkIcon class="h-4" />
       </button>
-      <span class="h-6 border-l border-base-300 mx-1"></span>
+      <span class="h-6 border-l border-base-300 mx-1 hidden sm:block"></span>
       <button
         type="button"
         role="switch"
@@ -68,7 +69,7 @@ function onSearchInput() {
             :class="{ 'translate-x-4': deepSearch }"
           ></span>
         </span>
-        Search inside shells
+        <span class="hidden md:inline">Search inside shells</span>
       </button>
     </div>
 

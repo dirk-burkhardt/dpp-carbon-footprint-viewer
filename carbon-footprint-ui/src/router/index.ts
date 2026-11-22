@@ -68,7 +68,7 @@ const router = createRouter({
           name: "visualization.single.simulation",
           component: () => import("@/views/single/SingleSimulation.vue"),
           meta: {
-            back: "visualization.single",
+            back: "visualization.single.components",
             breadcrumb: "Simulation"
           },
         }

@@ -150,6 +150,8 @@ export type ApiMeasureSource = {
   semanticId?: string | null
   value?: string | null
   unit?: string | null
+  /** Calculation if the value combines several properties */
+  derivation?: string | null
 }
 
 export type ApiMeasure = {
@@ -169,6 +171,8 @@ export type ApiIndicators = {
   depth?: ApiMeasure | null
   volume?: number | null
   materials: { name: string, value: string, source: ApiMeasureSource }[]
+  /** Whether the shell has a Technical Data submodel at all */
+  technicalDataFound?: boolean
   warnings: string[]
 }
 
@@ -191,6 +195,9 @@ export function fetchIndicators(aasIdentifier: string): Promise<ApiIndicators | 
 /** Short description of where a value comes from, e.g. for a tooltip */
 export function describeSource(measure: ApiMeasure): string {
   const { source } = measure
+  if (source.derivation) {
+    return `Technical Data: ${source.derivation}`
+  }
   const name = source.name || source.idShort || 'property'
   const given = [source.value, source.value && source.unit && !source.value.includes(source.unit) ? source.unit : '']
     .filter(Boolean)

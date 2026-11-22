@@ -81,3 +81,21 @@ def _b64(value: str) -> str:
     import base64
 
     return base64.urlsafe_b64encode(value.encode()).decode().rstrip("=")
+
+
+def test_stroke_dependent_mass():
+    result = derive_indicators(
+        _td(
+            {"idShort": "Basic_weight_for_0_mm_stroke", "value": "331 g"},
+            {"idShort": "Additional_weight_per_10_mm_stroke", "value": "52.5 g"},
+            {"idShort": "Stroke", "value": "30 mm"},
+            {"idShort": "Moving_mass_with_0_mm_stroke", "value": "109 g"},
+        )
+    )
+    assert result.mass.value == pytest.approx(0.331 + 3 * 0.0525)
+    assert "Stroke" in result.mass.source.derivation
+    assert result.technicalDataFound
+
+
+def test_without_technical_data():
+    assert derive_indicators([]).technicalDataFound is False

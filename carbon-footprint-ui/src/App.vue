@@ -17,6 +17,8 @@ import type { components } from '@/lib/api/AssetAdministrationShellRepository'
 import GlobalContextMenuComponent from '@/components/GlobalContextMenuComponent.vue'
 import HelpBar from '@/components/HelpBar.vue'
 import { decodeBase64 } from '@/lib/encoding'
+import DesktopOnlyNotice from '@/components/layout/DesktopOnlyNotice.vue'
+import { isMobile, showDesktopViewsAnyway } from '@/lib/viewport'
 import { fetchRawUploadLimits, isUploadUrl, uploadIdFromUrl, uploadInfos } from '@/lib/api/uploads'
 import {
   addExternalSource,
@@ -140,6 +142,9 @@ watch(externalShells, (shells) => {
     .map((shell) => shell.id)
 }, { deep: true })
 
+// Views that are only offered after a notice on small screens
+const desktopOnlyRoutes = ['visualization.dual', 'datasheet', 'visualization.multi'];
+
 // Right hand help bar content
 const helpBarContent = ref<Component>();
 provide(helpBarKey, helpBarContent);
@@ -151,10 +156,12 @@ provide(helpBarKey, helpBarContent);
   <HelpBar />
   <GlobalContextMenuComponent />
   <main class="grow">
-    <RouterView :key="JSON.stringify([$route.name, $route.params])" />
+    <!-- Analyses comparing many values side by side need a large screen; small screens get a notice first -->
+    <DesktopOnlyNotice v-if="isMobile && !showDesktopViewsAnyway && desktopOnlyRoutes.includes(String($route.name))" />
+    <RouterView v-else :key="JSON.stringify([$route.name, $route.params])" />
   </main>
-  <!-- Auf der Startseite sitzt die Statusanzeige unter den Favoriten -->
-  <div v-if="$route.name !== 'home'" class="fixed bottom-3 right-3 z-40 bg-base-100 rounded-full shadow-md">
+  <!-- Auf der Startseite sitzt die Statusanzeige unter den Favoriten (auf kleinen Bildschirmen ohne Favoriten unten rechts) -->
+  <div v-if="$route.name !== 'home' || isMobile" class="fixed bottom-3 right-3 z-40 bg-base-100 rounded-full shadow-md">
     <StatusIndicator small />
   </div>
   <ProblemPanel />

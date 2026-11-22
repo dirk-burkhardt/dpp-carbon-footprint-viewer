@@ -348,6 +348,7 @@ class MeasureSource(BaseModel):
     semanticId: Optional[str] = None
     value: Optional[str] = Field(default=None, description="Value as given in the file")
     unit: Optional[str] = Field(default=None, description="Unit as given in the file (or in the value)")
+    derivation: Optional[str] = Field(default=None, description="Calculation if the value combines several properties")
 
 
 class Measure(BaseModel):
@@ -373,6 +374,7 @@ class Indicators(BaseModel):
     depth: Optional[Measure] = None
     volume: Optional[float] = Field(default=None, description="width × height × depth in m³")
     materials: list[MaterialInfo] = []
+    technicalDataFound: bool = Field(default=False, description="Whether the shell has a Technical Data submodel")
     warnings: list[str] = []
 
 

@@ -1,6 +1,6 @@
 """Estimates for life cycle phases without a declared footprint.
 
-Rules (see docs/strategie-technical-data-und-hierarchie.md):
+Rules (see docs/strategy-technical-data-and-hierarchy.md):
 
 * Only phases that no declared footprint covers are estimated, so declared values are never counted twice.
 * Every estimate states its formula, its inputs and where each input and factor comes from: the shell (Technical

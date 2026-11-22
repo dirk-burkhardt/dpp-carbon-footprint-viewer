@@ -1,73 +1,74 @@
 # DPPviewer
 
-Visuelle Analyse von Carbon Footprints aus Digitalen Produktpässen (Asset Administration Shells, AAS/AASX).
-Hervorgegangen aus der Masterarbeit „Visual Analytics on Digital Product Passports to Optimize Production Chains“
-im Forschungsprojekt CLiCE-DiPP, weitergeführt vom VIS-Team der Hochschule Darmstadt.
+Visual analysis of carbon footprints from digital product passports (Asset Administration Shells, AAS/AASX).
+Originates from the master's thesis "Visual Analytics on Digital Product Passports to Optimize Production Chains"
+in the research project CLiCE-DiPP and is continued by the VIS team of Darmstadt University of Applied Sciences
+(Hochschule Darmstadt).
 
 A public version is running at: https://dppviewer.policymodelling.com
 
-## Bestandteile
+## Components
 
-| Ordner | Inhalt |
+| Folder | Content |
 |---|---|
-| [`carbon-footprint-api`](carbon-footprint-api/README.md) | REST-API (Python, FastAPI), liest AAS-/AASX-Dateien und stellt sie unter `/api/v4` bereit |
-| [`carbon-footprint-ui`](carbon-footprint-ui/README.md) | Oberfläche (Vue, TypeScript, Vite) |
-| `repo` | Beispiel- und Projektdateien (AASX), die die API beim Start lädt; `repo/uploads` nimmt hochgeladene Dateien auf |
-| `tools` | Hilfsskripte für das Gesamtprojekt (Versionierung, Prüfung auf neue IDTA-Templates) |
-| `docs` | Konzepte, z. B. [Strategie für Technical Data und Hierarchical Structures](docs/strategie-technical-data-und-hierarchie.md) |
+| [`carbon-footprint-api`](carbon-footprint-api/README.md) | REST API (Python, FastAPI) that reads AAS/AASX files and provides them under `/api/v4` |
+| [`carbon-footprint-ui`](carbon-footprint-ui/README.md) | User interface (Vue, TypeScript, Vite) |
+| `repo` | Sample and project files (AASX) that the API loads on startup; `repo/uploads` takes uploaded files |
+| `tools` | Helper scripts for the whole project (versioning, check for new IDTA templates) |
+| `docs` | Concepts, e.g. the [strategy for Technical Data and Hierarchical Structures](docs/strategy-technical-data-and-hierarchy.md) |
 
-Die aktuellen Versionen stehen im jeweiligen `CHANGELOG.md` und auf der About-Seite der Oberfläche.
+The current versions are listed in the respective `CHANGELOG.md` and on the About page of the user interface.
 
-## Schnellstart (Docker, lokal)
+## Quick start (Docker, local)
 
-Voraussetzungen: Docker mit Compose-Plugin (Docker Desktop unter Windows/macOS, Docker Engine unter Linux).
+Requirements: Docker with the Compose plugin (Docker Desktop on Windows/macOS, Docker Engine on Linux).
 
 ```bash
 cp .env.example .env               # Windows: copy .env.example .env
-mkdir -p repo/uploads              # Ablage für hochgeladene Dateien
-sudo chown 10001 repo/uploads      # nur Linux: der API-Container läuft als Benutzer 10001
-docker compose up -d --build       # Images bauen und beide Container starten
-docker compose ps                  # Status, die API meldet sich nach einigen Sekunden als healthy
-docker compose logs -f             # Protokolle verfolgen (Strg+C beendet nur die Anzeige)
-docker compose down                # beenden
+mkdir -p repo/uploads              # folder for uploaded files
+sudo chown 10001 repo/uploads      # Linux only: the API container runs as user 10001
+docker compose up -d --build       # build the images and start both containers
+docker compose ps                  # status, the API reports healthy after a few seconds
+docker compose logs -f             # follow the logs (Ctrl+C only stops the output)
+docker compose down                # stop
 ```
 
-Die API lädt die AASX-Dateien aus `repo` beim Start (nur die Dateien direkt im Ordner, keine Unterordner).
-Hochgeladene Dateien legt sie in `repo/uploads` ab, getrennt vom statischen Bestand; sie werden nach
-`UPLOAD_TTL_HOURS` und bei jedem Neustart gelöscht. Ist der Ordner nicht beschreibbar, hält die API Uploads nur
-im Arbeitsspeicher und meldet das im Protokoll. Nach Änderungen dort genügt `docker compose restart api`,
-nach Änderungen am Quellcode `docker compose up -d --build`.
+The API loads the AASX files in `repo` on startup (only files directly in the folder, no subfolders). Uploaded
+files are stored in `repo/uploads`, separate from the static files; they are deleted after `UPLOAD_TTL_HOURS` and
+on every restart. If the folder is not writable, the API keeps uploads in memory only and reports this in its log.
+After changes in `repo`, `docker compose restart api` is sufficient; after changes to the source code run
+`docker compose up -d --build`.
 
-In `.env` lassen sich anpassen (alle Angaben sind optional, siehe Kommentare in `.env.example`):
+Settings in `.env` (all optional, see the comments in `.env.example`):
 
-| Variable | Standard | Bedeutung |
+| Variable | Default | Meaning |
 |---|---|---|
-| `UI_PORT` | `5001` | Port auf dem Rechner, unter dem die Oberfläche erreichbar ist |
-| `API_LOG_LEVEL` | `INFO` | Protokollstufe der API |
-| `API_DOCS_ENABLED` | `true` | Swagger-Oberfläche und OpenAPI-Beschreibung bereitstellen |
-| `API_EXTERNAL_SHELLS_ENABLED` | `true` | Laden von AASX-Dateien über eine URL erlauben |
-| `UPLOADS_ENABLED` | `true` | Hochladen von AAS(X)-Dateien in der Oberfläche erlauben |
-| `UPLOAD_MAX_MB` | `25` | Maximale Größe einer hochgeladenen Datei in MB |
-| `UPLOAD_TTL_HOURS` | `3` | Stunden, nach denen hochgeladene und über Links geladene Dateien verworfen werden (Uploads spätestens beim Neustart der API) |
-| `MAP_TILE_URL`, `MAP_ATTRIBUTION`, `GEOCODING_URL` | leer | Kartenkacheln und Adresssuche, leer = OpenStreetMap/Nominatim, `GEOCODING_URL=off` schaltet die Adresssuche ab |
+| `UI_PORT` | `5001` | Port on the host under which the user interface is available |
+| `API_LOG_LEVEL` | `INFO` | Log level of the API |
+| `API_DOCS_ENABLED` | `true` | Provide the Swagger UI and the OpenAPI description |
+| `API_EXTERNAL_SHELLS_ENABLED` | `true` | Allow loading AASX files from a URL |
+| `UPLOADS_ENABLED` | `true` | Allow uploading AAS(X) files in the user interface |
+| `UPLOAD_MAX_MB` | `25` | Maximum size of an uploaded file in MB |
+| `UPLOAD_TTL_HOURS` | `3` | Hours after which uploaded files and files loaded from links are discarded (uploads at the latest on a restart of the API) |
+| `MAP_TILE_URL`, `MAP_ATTRIBUTION`, `GEOCODING_URL` | empty | Map tiles and address search, empty = OpenStreetMap/Nominatim, `GEOCODING_URL=off` disables the address search |
 
-Im Browser erreichbar (mit Standardport 5001):
+Available in the browser (with the default port 5001):
 
-| Adresse | Inhalt |
+| Address | Content |
 |---|---|
-| http://localhost:5001 | Oberfläche: Auswahl der Assets, Einzelansicht, Compare, Datasheet |
-| http://localhost:5001/about | Info-Seite mit den Versionen von Oberfläche und API |
-| http://localhost:5001/api/docs | Swagger-Oberfläche der API (nur mit `API_DOCS_ENABLED=true`) |
-| http://localhost:5001/api/openapi.json | OpenAPI-Beschreibung der API (nur mit `API_DOCS_ENABLED=true`) |
-| http://localhost:5001/api/health | Zustand der API mit Version und Anzahl geladener Shells |
-| http://localhost:5001/api/v4/shells | Beispiel eines fachlichen Endpunkts: alle geladenen Shells als JSON |
+| http://localhost:5001 | User interface: asset selection, single asset view, Compare, Datasheet |
+| http://localhost:5001/about | About page with the versions of user interface and API |
+| http://localhost:5001/api/docs | Swagger UI of the API (only with `API_DOCS_ENABLED=true`) |
+| http://localhost:5001/api/openapi.json | OpenAPI description of the API (only with `API_DOCS_ENABLED=true`) |
+| http://localhost:5001/api/health | State of the API with version and number of loaded shells |
+| http://localhost:5001/api/v4/shells | Example of a domain endpoint: all loaded shells as JSON |
 
-Die API hat keinen eigenen Port nach außen, sie ist nur über die Oberfläche unter `/api` erreichbar. Eine
-Verwaltungsoberfläche gibt es nicht, Einstellungen erfolgen ausschließlich über `.env`.
+The API has no port of its own to the outside; it is only reachable through the user interface under `/api`.
+There is no administration interface, all settings are made in `.env`.
 
-## Schnellstart (Entwicklung)
+## Quick start (development)
 
-Voraussetzungen: Python 3.10+, Node.js 20.19+.
+Requirements: Python 3.10+, Node.js 20.19+.
 
 ```bash
 # Terminal 1: API
@@ -77,58 +78,59 @@ python -m venv .venv
 pip install -e ".[dev]"
 python -m carbon_footprint_api --aasx "../repo/*.aasx" --uploadDir ../repo/uploads
 
-# Terminal 2: Oberfläche
+# Terminal 2: user interface
 cd carbon-footprint-ui
 npm install
 npm run dev
 ```
 
-Die Oberfläche läuft dann unter http://localhost:5173 und leitet `/api` an die API auf Port 8080 weiter.
+The user interface then runs at http://localhost:5173 and forwards `/api` to the API on port 8080.
 
-## Versionierung
+## Versioning
 
-API und Oberfläche haben eigene Versionen nach [Semantic Versioning](https://semver.org/lang/de/). Jede Änderung
-erhöht die Version des betroffenen Teils, die Stufe richtet sich nach der schwersten Änderung:
+API and user interface have their own versions following [Semantic Versioning](https://semver.org/). Every change
+raises the version of the affected part; the level depends on the most severe change:
 
-| Stufe | API | Oberfläche |
+| Level | API | User interface |
 |---|---|---|
-| `MAJOR` | Inkompatible Änderung an Endpunkten, Antwortformat, Optionen oder Umgebungsvariablen (neues Präfix `/api/vN`) | Benötigt eine neue Hauptversion der API, entfernte Ansichten oder Funktionen, Links oder gespeicherte Einstellungen werden ungültig |
-| `MINOR` | Neue Endpunkte, Optionen oder Funktionen, abwärtskompatibel; neue Betriebsart (z. B. Container) | Neue Ansichten, Funktionen oder Einstellungen; sichtbare Gestaltungsänderungen |
-| `PATCH` | Fehlerbehebungen, Sicherheitskorrekturen ohne Schnittstellenänderung, Aktualisierung von Abhängigkeiten, interne Umbauten | Fehlerbehebungen, Sicherheitskorrekturen, Aktualisierung von Abhängigkeiten, interne Umbauten |
+| `MAJOR` | Incompatible change of endpoints, response format, options or environment variables (new prefix `/api/vN`) | Requires a new major version of the API; removed views or functions; links or stored settings become invalid |
+| `MINOR` | New endpoints, options or functions, backwards compatible; new mode of operation (e.g. container) | New views, functions or settings; visible design changes |
+| `PATCH` | Bug fixes, security fixes without interface changes, dependency updates, internal refactoring | Bug fixes, security fixes, dependency updates, internal refactoring |
 
-Reine Dokumentationsänderungen erhöhen keine Version. Erhöht wird mit:
+Changes to the documentation only do not raise a version. Versions are raised with:
 
 ```bash
-python tools/bump_version.py api patch "Kurze Beschreibung der Änderung"
-python tools/bump_version.py ui minor "Kurze Beschreibung der Änderung"
+python tools/bump_version.py api patch "Short description of the change"
+python tools/bump_version.py ui minor "Short description of the change"
 ```
 
-Das Skript setzt die Version und trägt die Änderung in das `CHANGELOG.md` des Teils und in das des Gesamtprojekts ein.
-Tests der API und der Build der Oberfläche prüfen, dass Version und Changelog zusammenpassen.
+The script sets the version and adds the change to the `CHANGELOG.md` of the part and to that of the whole project.
+The API tests and the build of the user interface check that version and changelog match.
 
-| Oberfläche | benötigte API |
+| User interface | Required API |
 |---|---|
 | 1.x | 4.x |
 
-## IDTA-Submodel-Templates
+## IDTA submodel templates
 
-Die API liest die IDTA-Submodels (Carbon Footprint, Digital Nameplate, Hierarchical Structures, Technical Data,
-Handover Documentation, Maintenance Instructions u. a.) in allen bekannten Versionen sowie AAS/AASX nach Metamodell
-3.0 bis 3.2, siehe [API-README](carbon-footprint-api/README.md#fachliche-endpunkte-products). Ob auf
-[GitHub](https://github.com/admin-shell-io/submodel-templates/tree/main/published) neue Versionen erschienen sind,
-und ob es neue Releases von [Metamodell](https://github.com/admin-shell-io/aas-specs-metamodel) oder
-[AASX-Format](https://github.com/admin-shell-io/aas-specs-aasx) gibt, prüft:
+The API reads the IDTA submodels (Carbon Footprint, Digital Nameplate, Hierarchical Structures, Technical Data,
+Handover Documentation, Maintenance Instructions and others) in all known versions as well as AAS/AASX according to
+metamodel 3.0 to 3.2, see the [API README](carbon-footprint-api/README.md#domain-endpoints-products). Whether new
+versions have been published on [GitHub](https://github.com/admin-shell-io/submodel-templates/tree/main/published),
+and whether there are new releases of the [metamodel](https://github.com/admin-shell-io/aas-specs-metamodel) or the
+[AASX format](https://github.com/admin-shell-io/aas-specs-aasx), is checked by:
 
 ```bash
-python tools/check_idta_templates.py              # Bericht mit Strukturvergleich; Exit-Code 1 bei neuen Versionen
-python tools/check_idta_templates.py --accept     # nach Anpassung der Parser: neue Versionen übernehmen
-python tools/check_idta_templates.py --fixtures   # Testdaten (alle Templates) neu laden
+python tools/check_idta_templates.py              # report with structure comparison; exit code 1 for new versions
+python tools/check_idta_templates.py --accept     # after adapting the parsers: accept the new versions
+python tools/check_idta_templates.py --fixtures   # download the test data (all templates) again
 ```
 
-## Lizenz
+## License
 
-Apache License 2.0, siehe [LICENSE](LICENSE).
+Apache License 2.0, see [LICENSE](LICENSE).
 
 ## Changelog
 
-Alle Änderungen stehen in [CHANGELOG.md](CHANGELOG.md), die Einzelheiten je Teil in den Changelogs von [API](carbon-footprint-api/CHANGELOG.md) und [Oberfläche](carbon-footprint-ui/CHANGELOG.md).
+All changes are listed in [CHANGELOG.md](CHANGELOG.md), the details per part in the changelogs of the
+[API](carbon-footprint-api/CHANGELOG.md) and the [user interface](carbon-footprint-ui/CHANGELOG.md).

@@ -23,6 +23,8 @@ import {
   CalculatorIcon
 } from '@heroicons/vue/24/outline'
 import InfoBox from '@/components/InfoBox.vue'
+import MobileAssetView from '@/components/MobileAssetView.vue'
+import { isMobile, showDesktopViewsAnyway } from '@/lib/viewport'
 import { storageRef } from '@/lib/storage'
 // PresentationChartBarIcon CircleStackIcon CogIcon
 const route = useRoute();
@@ -50,6 +52,11 @@ const info = computedAsync<Awaited<ReturnType<typeof loadFullAssetInfo> | undefi
 // Whether to show the large version of the left-hand tabs
 const expandTabs = storageRef('expandPageTabs', true);
 
+// Components and the simulation share one place in the navigation; a switch below the component counts changes
+// between them. Without components there is nothing to simulate.
+const isComponentsView = computed(() => route.name === 'visualization.single.components' || route.name === 'visualization.single.simulation')
+const hasComponents = computed(() => (info.value?.carbonTree?.connectionsArray.length ?? 0) > 0)
+
 // Whether this asset currently includes simulated values
 const showSimulation = computed(() => info.value?.carbonTree?.hasChanges && route.name !== "visualization.single.simulation")
 </script>
@@ -59,13 +66,22 @@ const showSimulation = computed(() => info.value?.carbonTree?.hasChanges && rout
     <BreadcrumbsBar />
   </div>
   <LoadFailed v-if="currentLoadError" :message="currentLoadError" />
+  <!-- Small screens: compact view without the analyses that need a large screen -->
+  <template v-else-if="isMobile && !showDesktopViewsAnyway">
+    <MobileAssetView v-if="info" :info="info" />
+    <div v-else class="p-4 space-y-3">
+      <div class="skeleton h-20 w-full"></div>
+      <div class="skeleton h-48 w-full"></div>
+    </div>
+  </template>
   <div class="flex w-full" v-else>
     <!-- Left hand tabs -->
-    <div class="page-tabs pt-10 pb-4" :class="{'min-w-72': expandTabs }">
+    <!-- Fixed width: the separator to the content must not move when switching views -->
+    <div class="page-tabs pt-10 pb-4 shrink-0" :class="expandTabs ? 'w-72' : 'w-28 page-tabs-collapsed'">
       <button class="absolute right-2 top-3" :title="expandTabs ? 'Collapse' : 'Expand'" @click="expandTabs = !expandTabs"><ChevronDoubleRightIcon class="w-4" v-if="!expandTabs" /><ChevronDoubleLeftIcon class="w-4" v-else /></button>
       <div class="page-tabs-container" v-if="info">
         <router-link
-          class="page-tab h-1/5"
+          class="page-tab h-1/4"
           :class="{'active': route.name === 'visualization.single'}"
           :to="{ name: 'visualization.single', params: { asset: route.params.asset } }"
         >
@@ -81,13 +97,13 @@ const showSimulation = computed(() => info.value?.carbonTree?.hasChanges && rout
         </router-link>
         <router-link
           :to="{ name: 'visualization.single.components', params: { asset: route.params.asset } }"
-          class="page-tab h-1/5"
-          :class="{'active': route.name === 'visualization.single.components'}"
+          class="page-tab h-1/4"
+          :class="{'active': isComponentsView}"
         >
           <div class="page-tab-container">
             <PuzzlePieceIcon class="h-10 mx-auto mb-2 min-h-6 text-base-content" />
             <div class="text-base-content">
-              <strong>Components</strong>
+              <strong>Compo&shy;nents</strong>
               <div :class="{'hidden': !expandTabs}">
                 Is one responsible for most of the products footprint?
               </div>
@@ -95,23 +111,8 @@ const showSimulation = computed(() => info.value?.carbonTree?.hasChanges && rout
           </div>
         </router-link>
         <router-link
-          :to="{ name: 'visualization.single.estimates', params: { asset: route.params.asset } }"
-          class="page-tab h-1/5"
-          :class="{'active': route.name === 'visualization.single.estimates'}"
-        >
-          <div class="page-tab-container">
-            <CalculatorIcon class="h-10 mx-auto mb-2 min-h-6 text-base-content" />
-            <div class="text-base-content">
-              <strong>Estimates</strong>
-              <div :class="{'hidden': !expandTabs}">
-                Which emissions are missing in the declared data? Estimated from mass, power and product class.
-              </div>
-            </div>
-          </div>
-        </router-link>
-        <router-link
           :to="{ name: 'visualization.single.lifecycle', params: { asset: route.params.asset } }"
-          class="page-tab h-1/5"
+          class="page-tab h-1/4"
           :class="{'active': route.name === 'visualization.single.lifecycle'}"
         >
           <div class="page-tab-container">
@@ -125,16 +126,16 @@ const showSimulation = computed(() => info.value?.carbonTree?.hasChanges && rout
           </div>
         </router-link>
         <router-link
-          :to="{ name: 'visualization.single.simulation', params: { asset: route.params.asset } }"
-          class="page-tab h-1/5"
-          :class="{'active': route.name === 'visualization.single.simulation'}"
+          :to="{ name: 'visualization.single.estimates', params: { asset: route.params.asset } }"
+          class="page-tab h-1/4"
+          :class="{'active': route.name === 'visualization.single.estimates'}"
         >
           <div class="page-tab-container">
-            <ArrowPathIcon class="h-10 mx-auto mb-2 min-h-6 text-base-content" />
+            <CalculatorIcon class="h-10 mx-auto mb-2 min-h-6 text-base-content" />
             <div class="text-base-content">
-              <strong>Simulation</strong>
+              <strong>Estimates</strong>
               <div :class="{'hidden': !expandTabs}">
-                Simulate the swap of one or multiple sub-components.
+                Which emissions are missing in the declared data? Estimated from mass, power and product class.
               </div>
             </div>
           </div>
@@ -214,6 +215,29 @@ const showSimulation = computed(() => info.value?.carbonTree?.hasChanges && rout
               without sub-components
             </div>
           </InfoBox>
+          <!-- Switch between the component analysis and the simulation of component changes -->
+          <div v-if="isComponentsView" class="col-start-5 col-span-2 flex justify-end">
+            <div class="join" :title="hasComponents ? undefined : 'This asset has no components that could be simulated'">
+              <router-link
+                class="btn btn-sm join-item"
+                :class="{ 'btn-primary': route.name === 'visualization.single.components' }"
+                :to="{ name: 'visualization.single.components', params: { asset: route.params.asset } }"
+              >
+                <PuzzlePieceIcon class="h-4" /> Components
+              </router-link>
+              <router-link
+                v-if="hasComponents"
+                class="btn btn-sm join-item"
+                :class="{ 'btn-primary': route.name === 'visualization.single.simulation' }"
+                :to="{ name: 'visualization.single.simulation', params: { asset: route.params.asset } }"
+              >
+                <ArrowPathIcon class="h-4" /> Simulation
+              </router-link>
+              <button v-else type="button" class="btn btn-sm join-item" disabled>
+                <ArrowPathIcon class="h-4" /> Simulation
+              </button>
+            </div>
+          </div>
         </div>
       </Transition>
 

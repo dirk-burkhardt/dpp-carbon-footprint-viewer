@@ -32,6 +32,16 @@ const ownShare = computed(() => {
   return s && total > 0 ? s.ownProductCo2eq / total : undefined
 })
 
+// Why a reference quantity is missing: no Technical Data submodel at all, or the property is not stated in it
+function missingNote(quantity: string) {
+  if (props.indicators === null) {
+    return 'not offered by this API'
+  }
+  return props.indicators.technicalDataFound === false
+    ? 'the shell has no Technical Data submodel'
+    : `no ${quantity} stated in Technical Data`
+}
+
 function formatMass(kg: number) {
   return kg < 1 ? `${Math.round(kg * 1000 * 10) / 10} g` : `${Math.round(kg * 100) / 100} kg`
 }
@@ -39,7 +49,7 @@ function formatMass(kg: number) {
 
 <template>
   <div class="grid grid-cols-[repeat(auto-fit,minmax(14rem,1fr))] gap-4">
-    <div class="key-figure" :title="mass ? describeSource(mass) : 'Technical Data of this asset contains no mass'">
+    <div class="key-figure" :title="mass ? describeSource(mass) : missingNote('mass')">
       <div class="key-figure-label">CO2eq per kg of product</div>
       <template v-if="perKg !== undefined">
         <div class="key-figure-value">{{ grams(perKg, 'kg') }}</div>
@@ -47,11 +57,11 @@ function formatMass(kg: number) {
       </template>
       <template v-else>
         <div class="key-figure-value opacity-50">not available</div>
-        <div class="key-figure-note">{{ mass ? 'no carbon footprint data' : 'no mass in Technical Data' }}</div>
+        <div class="key-figure-note">{{ mass ? 'no carbon footprint data' : missingNote('mass') }}</div>
       </template>
     </div>
 
-    <div class="key-figure" :title="power ? describeSource(power) : 'Technical Data of this asset contains no power consumption'">
+    <div class="key-figure" :title="power ? describeSource(power) : missingNote('power consumption')">
       <div class="key-figure-label">CO2eq per watt of power</div>
       <template v-if="perWatt !== undefined">
         <div class="key-figure-value">{{ grams(perWatt, 'kg') }}</div>
@@ -59,7 +69,7 @@ function formatMass(kg: number) {
       </template>
       <template v-else>
         <div class="key-figure-value opacity-50">not available</div>
-        <div class="key-figure-note">{{ power ? 'no carbon footprint data' : 'no power consumption in Technical Data' }}</div>
+        <div class="key-figure-note">{{ power ? 'no carbon footprint data' : missingNote('power consumption') }}</div>
       </template>
     </div>
 
